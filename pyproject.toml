@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "btwin"
+version = "0.5.2"
+description = "A toolkit for graph-based decision support system prototypes in building management"
+readme = "README.md"
+license = "PolyForm-Noncommercial-1.0.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "Angelo Massafra" },
+]
+keywords = ["building", "knowledge-graph", "brick", "bot", "ifc", "digital-twin"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "pandas",
+    "networkx",
+    "openpyxl",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff"]
+viz = ["matplotlib", "plotly", "kaleido"]
+neo4j = ["neo4j"]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
+    "mkdocs-autorefs>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/AngeloMassafra/btwin"
+Documentation = "https://angelomassafra.github.io/btwin/"
+Repository = "https://github.com/AngeloMassafra/btwin"
+Issues = "https://github.com/AngeloMassafra/btwin/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = ["src/btwin/plot.py"]
+
+[tool.ruff]
+target-version = "py310"
+src = ["src"]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "E701", "E702"]

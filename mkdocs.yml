@@ -1,0 +1,97 @@
+site_name: BTwin
+site_description: A Python toolkit for graph-based decision support system prototypes in building management
+site_url: https://angelomassafra.github.io/btwin/
+repo_url: https://github.com/AngeloMassafra/btwin
+repo_name: AngeloMassafra/btwin
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - content.tabs.link
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            merge_init_into_class: true
+  - autorefs
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+
+extra_css:
+  - assets/css/extra.css
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide:
+      - user-guide/index.md
+      - Ontologies: user-guide/ontologies.md
+      - Spatial Elements: user-guide/spatial-elements.md
+      - Equipment: user-guide/equipment.md
+      - Properties: user-guide/properties.md
+      - Points & Observations: user-guide/points-observations.md
+      - KPIs & Scenarios: user-guide/kpis-scenarios.md
+      - Graphs: user-guide/graphs.md
+      - Serialization: user-guide/serialization.md
+  - Tutorials:
+      - tutorials/index.md
+      - Building a Spatial Model: tutorials/building-model.md
+      - Equipment Inventory: tutorials/equipment-inventory.md
+      - Timeseries Data: tutorials/timeseries-data.md
+  - API Reference:
+      - api-reference/index.md
+      - Schema: api-reference/schema.md
+      - SpatialElement: api-reference/spatial-element.md
+      - Equipment: api-reference/equipment.md
+      - Point: api-reference/point.md
+      - PropertySet: api-reference/property-set.md
+      - KPISet: api-reference/kpi-set.md
+      - Scenario: api-reference/scenario.md
+      - Document: api-reference/document.md
+      - Graph: api-reference/graph.md
+      - Plot: api-reference/plot.md
+      - Serialization: api-reference/serialization.md

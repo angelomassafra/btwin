@@ -1,0 +1,329 @@
+{
+    "@context": {
+        "brick": "https://brickschema.org/schema/Brick#",
+        "bot": "https://w3id.org/bot#",
+        "ifc": "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#",
+        "eko": "http://energy.linkeddata.es/em-kpi/ontology#",
+        "kpi": "http://bimerr.iot.linkeddata.es/def/key-performance-indicator#",
+        "btwin": "btwin#",
+        "time": "https://www.w3.org/TR/2022/CRD-owl-time-20221115#"
+    },
+    "@graph": [
+        {
+            "@id": "myBuildingUID",
+            "@type": "bot:Building",
+            "relationships": {},
+            "name": "myBuildingName"
+        },
+        {
+            "@id": "mySpace1",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "myStoreyUID",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "myPset1",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "mySpaceName1"
+        },
+        {
+            "@id": "mySpace2",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "myStoreyUID",
+                        "@type": "bot:Storey"
+                    }
+                ]
+            },
+            "name": "mySpaceName2"
+        },
+        {
+            "@id": "mySpace3",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "myStoreyUID",
+                        "@type": "bot:Storey"
+                    }
+                ]
+            },
+            "name": "mySpaceName3"
+        },
+        {
+            "@id": "myStoreyUID",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "myBuildingUID",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "myStoreyName"
+        },
+        {
+            "@id": "myPset1",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Property Set 1",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "occupancyType",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "classroom",
+                        "unit": "str"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "area",
+                    "nominalValue": {
+                        "type": "IfcQuantityArea",
+                        "value": 34,
+                        "unit": "sqm"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "myKPISet1",
+            "name": "KPISet 1",
+            "@type": "btwin:KPISet",
+            "relationships": {
+                "eko:hasEvaluationTimestep": [
+                    {
+                        "@type": "time:interval",
+                        "time:hasBeginning": "2026-01-13T00:00:00Z",
+                        "time:hasEnd": "2026-02-14T00:00:00Z"
+                    }
+                ],
+                "eko:hasAssociatedObject": [
+                    {
+                        "@id": "mySpace1",
+                        "@type": "bot:Space"
+                    }
+                ],
+                "kpi:relatedScenario": [
+                    {
+                        "@id": "myScenario",
+                        "@type": "kpi:Scenario"
+                    }
+                ]
+            },
+            "btwin:hasKPIs": {
+                "myKPI1": {
+                    "@id": "myKPI1",
+                    "@type": "eko:KPI",
+                    "name": "Space Energy Use Intensity",
+                    "relationships": {
+                        "eko:hasAssociatedObject": [
+                            {
+                                "@id": null,
+                                "@type": null
+                            }
+                        ],
+                        "eko:hasEvaluationTimestep": [
+                            {
+                                "@type": "time:interval",
+                                "time:hasBeginning": "2026-01-13T00:00:00Z",
+                                "time:hasEnd": "2026-02-14T00:00:00Z"
+                            }
+                        ]
+                    },
+                    "nominalValue": {
+                        "@type": "eko:KPI",
+                        "value": 44,
+                        "unit": "kWh/m2"
+                    }
+                }
+            }
+        },
+        {
+            "@id": "myKPISet2",
+            "name": "KPISet 2",
+            "@type": "btwin:KPISet",
+            "relationships": {
+                "eko:hasEvaluationTimestep": [
+                    {
+                        "@type": "time:interval",
+                        "time:hasBeginning": "2025-01-13T00:00:00",
+                        "time:hasEnd": "2025-02-14T23:59:00"
+                    }
+                ],
+                "eko:hasAssociatedObject": [
+                    {
+                        "@id": "mySpace2",
+                        "@type": "bot:Space"
+                    }
+                ],
+                "kpi:relatedScenario": [
+                    {
+                        "@id": "myScenario",
+                        "@type": "kpi:Scenario"
+                    }
+                ]
+            },
+            "btwin:hasKPIs": {}
+        },
+        {
+            "@id": "myScenario",
+            "@type": "kpi:Scenario",
+            "relationships": {},
+            "name": "My scenario",
+            "description": "This is an example scenario"
+        },
+        {
+            "@id": "myDocument.ifc",
+            "@type": "btwin:Document",
+            "relationships": {
+                "btwin:isDocumentOf": [
+                    {
+                        "@id": "myBuildingUID",
+                        "@type": "bot:Building"
+                    }
+                ],
+                "kpi:relatedScenario": [
+                    {
+                        "@id": "myScenario",
+                        "@type": "kpi:Scenario"
+                    }
+                ]
+            },
+            "name": "Modello IFC edificio"
+        },
+        {
+            "@id": "ahu1",
+            "@type": "brick:Air_Handling_Unit",
+            "relationships": {
+                "brick:isPartOf": [
+                    {
+                        "@id": "heatingSystem",
+                        "@type": "brick:System"
+                    }
+                ],
+                "brick:hasLocation": [
+                    {
+                        "@id": "mySpace1",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "AHU (below ceiling)"
+        },
+        {
+            "@id": "ahu2",
+            "@type": "brick:Air_Handling_Unit",
+            "relationships": {
+                "brick:isPartOf": [
+                    {
+                        "@id": "heatingSystem",
+                        "@type": "brick:System"
+                    }
+                ],
+                "brick:hasLocation": [
+                    {
+                        "@id": "mySpace2",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "AHU (below ceiling)"
+        },
+        {
+            "@id": "fc1",
+            "@type": "brick:Fan_Coil_Unit",
+            "relationships": {
+                "brick:isPartOf": [
+                    {
+                        "@id": "heatingSystem",
+                        "@type": "brick:System"
+                    }
+                ],
+                "brick:hasLocation": [
+                    {
+                        "@id": "mySpace1",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Fan coil"
+        },
+        {
+            "@id": "hp1",
+            "@type": "brick:Packaged_Heat_Pump",
+            "relationships": {
+                "brick:isPartOf": [
+                    {
+                        "@id": "heatingSystem",
+                        "@type": "brick:System"
+                    }
+                ],
+                "brick:hasLocation": [
+                    {
+                        "@id": "mySpace1",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Heat pump"
+        },
+        {
+            "@id": "hwb1",
+            "@type": "brick:Electric_Boiler",
+            "relationships": {
+                "brick:isPartOf": [
+                    {
+                        "@id": "dhwSystem",
+                        "@type": "brick:System"
+                    }
+                ],
+                "brick:hasLocation": [
+                    {
+                        "@id": "mySpace2",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Hot water boiler"
+        },
+        {
+            "@id": "dhwSystem",
+            "@type": "brick:System",
+            "name": "dhwSystem",
+            "relationships": {
+                "brick:feeds": [
+                    {
+                        "@id": "myBuildingUID",
+                        "@type": "bot:Building"
+                    }
+                ]
+            }
+        },
+        {
+            "@id": "heatingSystem",
+            "@type": "brick:System",
+            "name": "heatingSystem",
+            "relationships": {
+                "brick:feeds": [
+                    {
+                        "@id": "myBuildingUID",
+                        "@type": "bot:Building"
+                    }
+                ]
+            }
+        }
+    ]
+}

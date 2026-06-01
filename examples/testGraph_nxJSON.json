@@ -1,0 +1,291 @@
+{
+  "directed": true,
+  "edges": [
+    {
+      "key": 0,
+      "objectType": "bot:Storey",
+      "source": "mySpace1",
+      "subjectType": "bot:Space",
+      "target": "myStoreyUID",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "ifc:IfcPropertySet",
+      "source": "mySpace1",
+      "subjectType": "bot:Space",
+      "target": "myPset1",
+      "type": "ifc:HasPropertySets"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Storey",
+      "source": "mySpace2",
+      "subjectType": "bot:Space",
+      "target": "myStoreyUID",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Storey",
+      "source": "mySpace3",
+      "subjectType": "bot:Space",
+      "target": "myStoreyUID",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "myStoreyUID",
+      "subjectType": "bot:Storey",
+      "target": "myBuildingUID",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "myKPISet1",
+      "subjectType": "btwin:KPISet",
+      "target": "mySpace1",
+      "type": "eko:hasAssociatedObject"
+    },
+    {
+      "key": 0,
+      "objectType": "kpi:Scenario",
+      "source": "myKPISet1",
+      "subjectType": "btwin:KPISet",
+      "target": "myScenario",
+      "type": "kpi:relatedScenario"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "myKPISet2",
+      "subjectType": "btwin:KPISet",
+      "target": "mySpace2",
+      "type": "eko:hasAssociatedObject"
+    },
+    {
+      "key": 0,
+      "objectType": "kpi:Scenario",
+      "source": "myKPISet2",
+      "subjectType": "btwin:KPISet",
+      "target": "myScenario",
+      "type": "kpi:relatedScenario"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "myDocument.ifc",
+      "subjectType": "btwin:Document",
+      "target": "myBuildingUID",
+      "type": "btwin:isDocumentOf"
+    },
+    {
+      "key": 0,
+      "objectType": "kpi:Scenario",
+      "source": "myDocument.ifc",
+      "subjectType": "btwin:Document",
+      "target": "myScenario",
+      "type": "kpi:relatedScenario"
+    },
+    {
+      "key": 0,
+      "objectType": "brick:System",
+      "source": "ahu1",
+      "subjectType": "brick:Air_Handling_Unit",
+      "target": "heatingSystem",
+      "type": "brick:isPartOf"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "ahu1",
+      "subjectType": "brick:Air_Handling_Unit",
+      "target": "mySpace1",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "brick:System",
+      "source": "ahu2",
+      "subjectType": "brick:Air_Handling_Unit",
+      "target": "heatingSystem",
+      "type": "brick:isPartOf"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "ahu2",
+      "subjectType": "brick:Air_Handling_Unit",
+      "target": "mySpace2",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "brick:System",
+      "source": "fc1",
+      "subjectType": "brick:Fan_Coil_Unit",
+      "target": "heatingSystem",
+      "type": "brick:isPartOf"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "fc1",
+      "subjectType": "brick:Fan_Coil_Unit",
+      "target": "mySpace1",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "brick:System",
+      "source": "hp1",
+      "subjectType": "brick:Packaged_Heat_Pump",
+      "target": "heatingSystem",
+      "type": "brick:isPartOf"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "hp1",
+      "subjectType": "brick:Packaged_Heat_Pump",
+      "target": "mySpace1",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "brick:System",
+      "source": "hwb1",
+      "subjectType": "brick:Electric_Boiler",
+      "target": "dhwSystem",
+      "type": "brick:isPartOf"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "hwb1",
+      "subjectType": "brick:Electric_Boiler",
+      "target": "mySpace2",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "dhwSystem",
+      "subjectType": "brick:System",
+      "target": "myBuildingUID",
+      "type": "brick:feeds"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "heatingSystem",
+      "subjectType": "brick:System",
+      "target": "myBuildingUID",
+      "type": "brick:feeds"
+    }
+  ],
+  "graph": {},
+  "multigraph": true,
+  "nodes": [
+    {
+      "id": "myBuildingUID",
+      "name": "myBuildingName",
+      "type": "bot:Building"
+    },
+    {
+      "id": "mySpace1",
+      "name": "mySpaceName1",
+      "type": "bot:Space"
+    },
+    {
+      "id": "mySpace2",
+      "name": "mySpaceName2",
+      "type": "bot:Space"
+    },
+    {
+      "id": "mySpace3",
+      "name": "mySpaceName3",
+      "type": "bot:Space"
+    },
+    {
+      "id": "myStoreyUID",
+      "name": "myStoreyName",
+      "type": "bot:Storey"
+    },
+    {
+      "area": 34,
+      "id": "myPset1",
+      "name": "Property Set 1",
+      "occupancyType": "classroom",
+      "type": "ifc:IfcPropertySet"
+    },
+    {
+      "Space Energy Use Intensity": 44,
+      "Space Energy Use Intensity_unit": "kWh/m2",
+      "associatedObjectId": "mySpace1",
+      "associatedObjectType": "bot:Space",
+      "hasBeginning": "2026-01-13T00:00:00Z",
+      "hasEnd": "2026-02-14T00:00:00Z",
+      "id": "myKPISet1",
+      "name": "KPISet 1",
+      "type": "btwin:KPISet"
+    },
+    {
+      "associatedObjectId": "mySpace2",
+      "associatedObjectType": "bot:Space",
+      "hasBeginning": "2025-01-13T00:00:00Z",
+      "hasEnd": "2025-02-14T23:59:00Z",
+      "id": "myKPISet2",
+      "name": "KPISet 2",
+      "type": "btwin:KPISet"
+    },
+    {
+      "description": "This is an example scenario",
+      "id": "myScenario",
+      "name": "My scenario",
+      "type": "kpi:Scenario"
+    },
+    {
+      "id": "myDocument.ifc",
+      "name": "Modello IFC edificio",
+      "type": "btwin:Document"
+    },
+    {
+      "id": "ahu1",
+      "name": "AHU (below ceiling)",
+      "type": "brick:Air_Handling_Unit"
+    },
+    {
+      "id": "ahu2",
+      "name": "AHU (below ceiling)",
+      "type": "brick:Air_Handling_Unit"
+    },
+    {
+      "id": "fc1",
+      "name": "Fan coil",
+      "type": "brick:Fan_Coil_Unit"
+    },
+    {
+      "id": "hp1",
+      "name": "Heat pump",
+      "type": "brick:Packaged_Heat_Pump"
+    },
+    {
+      "id": "hwb1",
+      "name": "Hot water boiler",
+      "type": "brick:Electric_Boiler"
+    },
+    {
+      "id": "dhwSystem",
+      "name": "dhwSystem",
+      "type": "brick:System"
+    },
+    {
+      "id": "heatingSystem",
+      "name": "heatingSystem",
+      "type": "brick:System"
+    }
+  ]
+}
