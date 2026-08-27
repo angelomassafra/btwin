@@ -1,0 +1,144 @@
+{
+  "@context": {
+    "brick": "https://brickschema.org/schema/Brick#",
+    "bot": "https://w3id.org/bot#"
+  },
+  "@graph": [
+    {
+      "@id": "SC-CLINIC",
+      "@type": "bot:Building",
+      "name": "Santa Chiara Outpatient Clinic",
+      "relationships": {}
+    },
+    {
+      "@id": "SC-CLINIC-F0",
+      "@type": "bot:Storey",
+      "name": "Ground Floor",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC",
+            "@type": "bot:Building"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F1",
+      "@type": "bot:Storey",
+      "name": "First Floor",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC",
+            "@type": "bot:Building"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F0-WR",
+      "@type": "bot:Space",
+      "name": "Waiting Room",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F0",
+            "@type": "bot:Storey"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F0-CR",
+      "@type": "bot:Space",
+      "name": "Consulting Room",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F0",
+            "@type": "bot:Storey"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F1-LAB",
+      "@type": "bot:Space",
+      "name": "Laboratory",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F1",
+            "@type": "bot:Storey"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F1-OFF",
+      "@type": "bot:Space",
+      "name": "Small Office",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F1",
+            "@type": "bot:Storey"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F0-WR-TS1",
+      "@type": "brick:Temperature_Sensor",
+      "name": "Temperature Sensor 1",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F0-WR",
+            "@type": "bot:Space"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F0-WR-CO2S1",
+      "@type": "brick:CO2_Sensor",
+      "name": "CO2 Sensor 1",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F0-WR",
+            "@type": "bot:Space"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F0-CR-TS1",
+      "@type": "brick:Temperature_Sensor",
+      "name": "Temperature Sensor 2",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F0-CR",
+            "@type": "bot:Space"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "SC-CLINIC-F1-LAB-HS1",
+      "@type": "brick:Humidity_Sensor",
+      "name": "Humidity Sensor 1",
+      "relationships": {
+        "brick:hasLocation": [
+          {
+            "@id": "SC-CLINIC-F1-LAB",
+            "@type": "bot:Space"
+          }
+        ]
+      }
+    }
+  ]
+}

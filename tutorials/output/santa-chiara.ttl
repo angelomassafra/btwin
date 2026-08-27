@@ -1,0 +1,47 @@
+@prefix bot: <https://w3id.org/bot#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://example.org/santachiara/SC-CLINIC-F0-CR-TS1> a brick:Temperature_Sensor ;
+    rdfs:label "Temperature Sensor 2" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F0-CR> .
+
+<https://example.org/santachiara/SC-CLINIC-F0-WR-CO2S1> a brick:CO2_Sensor ;
+    rdfs:label "CO2 Sensor 1" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F0-WR> .
+
+<https://example.org/santachiara/SC-CLINIC-F0-WR-TS1> a brick:Temperature_Sensor ;
+    rdfs:label "Temperature Sensor 1" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F0-WR> .
+
+<https://example.org/santachiara/SC-CLINIC-F1-LAB-HS1> a brick:Humidity_Sensor ;
+    rdfs:label "Humidity Sensor 1" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F1-LAB> .
+
+<https://example.org/santachiara/SC-CLINIC-F1-OFF> a bot:Space ;
+    rdfs:label "Small Office" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F1> .
+
+<https://example.org/santachiara/SC-CLINIC-F0-CR> a bot:Space ;
+    rdfs:label "Consulting Room" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F0> .
+
+<https://example.org/santachiara/SC-CLINIC-F1-LAB> a bot:Space ;
+    rdfs:label "Laboratory" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F1> .
+
+<https://example.org/santachiara/SC-CLINIC> a bot:Building ;
+    rdfs:label "Santa Chiara Outpatient Clinic" .
+
+<https://example.org/santachiara/SC-CLINIC-F0> a bot:Storey ;
+    rdfs:label "Ground Floor" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC> .
+
+<https://example.org/santachiara/SC-CLINIC-F0-WR> a bot:Space ;
+    rdfs:label "Waiting Room" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC-F0> .
+
+<https://example.org/santachiara/SC-CLINIC-F1> a bot:Storey ;
+    rdfs:label "First Floor" ;
+    brick:hasLocation <https://example.org/santachiara/SC-CLINIC> .
+
