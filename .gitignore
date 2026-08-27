@@ -45,5 +45,7 @@ site/
 # Local working project: real building documents, not part of the package
 myproject/
 
-# Tutorial figures (the same image is embedded in the notebook)
+# Tutorial scratch output: figures are already embedded in the notebook, and the
+# spreadsheets and databases are regenerated on every run
 tutorials/**/output/*.png
+tutorials/**/output/*.xlsx

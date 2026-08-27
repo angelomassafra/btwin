@@ -99,17 +99,19 @@ Serialization.JSONLDByObjects(objects, savePath="my_building.json")
 
 ## Tutorials
 
-Three runnable notebooks live in [`tutorials/`](https://github.com/angelomassafra/btwin/blob/main/tutorials), numbered in the order they are meant
+Four runnable notebooks live in [`tutorials/`](https://github.com/angelomassafra/btwin/blob/main/tutorials), numbered in the order they are meant
 to be read. Each sits in its own self-contained folder and is committed with its outputs, so they
 can be read on GitHub without running anything.
 
 | # | Tutorial | What it covers |
 |---|---|---|
-| 00 | [Create a BTwin graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/00-create-a-btwin-graph/create-a-btwin-graph.ipynb) | Builds a two-storey office from synthetic data — spatial hierarchy, property sets, sensors, a KPI set, documents — then serializes, queries and draws it. No LLM. |
-| 01 | [Move a graph between formats](https://github.com/angelomassafra/btwin/blob/main/tutorials/01-graph-formats/graph-formats.ipynb) | JSON-LD, NetworkX, RDF/SPARQL and Neo4j, and a measured account of what each conversion keeps or drops. |
-| 02 | [LLM in action](https://github.com/angelomassafra/btwin/blob/main/tutorials/02-llm-in-action/llm-in-action.ipynb) | Builds a graph from an English prompt and queries it in English. Requires an API key and bills your account. |
+| 00 | [Early adopters](https://github.com/angelomassafra/btwin/blob/main/tutorials/00-early-adopters/early-adopters.ipynb) | The reference walkthrough: every module, method by method — schema, spatial elements, equipment, properties, KPIs, points and observations, serialization, graph operations. |
+| 01 | [Create a BTwin graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/01-create-a-btwin-graph/create-a-btwin-graph.ipynb) | Builds a two-storey office from synthetic data — spatial hierarchy, property sets, sensors, a KPI set, documents — then serializes, queries and draws it. No LLM. |
+| 02 | [Move a graph between formats](https://github.com/angelomassafra/btwin/blob/main/tutorials/02-graph-formats/graph-formats.ipynb) | JSON-LD, NetworkX, RDF/SPARQL and Neo4j, and a measured account of what each conversion keeps or drops. |
+| 03 | [LLM in action](https://github.com/angelomassafra/btwin/blob/main/tutorials/03-llm-in-action/llm-in-action.ipynb) | Builds a graph from an English prompt and queries it in English. Requires an API key and bills your account. |
 
-Each notebook writes a self-contained interactive HTML page after every stage into its own
+00 is a reference to look things up in; 01 to 03 are a narrative that builds one graph and puts it
+to work. Those three write a self-contained interactive HTML page after every stage into their own
 `output/` folder, so you can click through the graph as it grows — open any `step-*.html` directly
 in a browser.
 
