@@ -67,10 +67,10 @@
 
 <https://example.org/officeblocka/pset-space-03> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
-    ifc:HasProperties [ rdfs:label "netFloorArea" ;
-            ifc:NominalValue 9.6e+01 ],
-        [ rdfs:label "occupancyType" ;
-            ifc:NominalValue "office" ] .
+    ifc:HasProperties [ rdfs:label "occupancyType" ;
+            ifc:NominalValue "office" ],
+        [ rdfs:label "netFloorArea" ;
+            ifc:NominalValue 9.6e+01 ] .
 
 <https://example.org/officeblocka/pset-space-04> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;

@@ -46,4 +46,4 @@ site/
 myproject/
 
 # Tutorial figures (the same image is embedded in the notebook)
-tutorials/output/*.png
+tutorials/**/output/*.png

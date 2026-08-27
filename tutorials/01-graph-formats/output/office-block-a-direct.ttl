@@ -64,32 +64,32 @@
 <https://example.org/officeblocka/pset-space-02> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
-            rdfs:label "occupancyType" ;
-            ifc:NominalValue "meeting" ],
-        [ a ifc:IfcPropertySingleValue ;
             rdfs:label "netFloorArea" ;
             ifc:NominalValue 2.85e+01 ;
-            ifc:Unit "sqm" ] .
+            ifc:Unit "sqm" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "meeting" ] .
 
 <https://example.org/officeblocka/pset-space-03> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "office" ],
+        [ a ifc:IfcPropertySingleValue ;
             rdfs:label "netFloorArea" ;
             ifc:NominalValue 9.6e+01 ;
-            ifc:Unit "sqm" ],
-        [ a ifc:IfcPropertySingleValue ;
-            rdfs:label "occupancyType" ;
-            ifc:NominalValue "office" ] .
+            ifc:Unit "sqm" ] .
 
 <https://example.org/officeblocka/pset-space-04> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "circulation" ],
+        [ a ifc:IfcPropertySingleValue ;
             rdfs:label "netFloorArea" ;
             ifc:NominalValue 1.8e+01 ;
-            ifc:Unit "sqm" ],
-        [ a ifc:IfcPropertySingleValue ;
-            rdfs:label "occupancyType" ;
-            ifc:NominalValue "circulation" ] .
+            ifc:Unit "sqm" ] .
 
 <https://example.org/officeblocka/space-01> a bot:Space ;
     rdfs:label "Reception" ;
