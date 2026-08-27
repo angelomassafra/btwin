@@ -1,0 +1,448 @@
+{
+    "@context": {
+        "brick": "https://brickschema.org/schema/Brick#",
+        "bot": "https://w3id.org/bot#",
+        "ifc": "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#",
+        "eko": "http://energy.linkeddata.es/em-kpi/ontology#",
+        "btwin": "btwin#",
+        "time": "https://www.w3.org/TR/2022/CRD-owl-time-20221115#"
+    },
+    "@graph": [
+        {
+            "@id": "bld-01",
+            "@type": "bot:Building",
+            "relationships": {},
+            "name": "Office Block A"
+        },
+        {
+            "@id": "storey-00",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "bld-01",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "Ground Floor"
+        },
+        {
+            "@id": "storey-01",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "bld-01",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "First Floor"
+        },
+        {
+            "@id": "zone-01",
+            "@type": "brick:Zone",
+            "relationships": {},
+            "name": "Thermal Zone North"
+        },
+        {
+            "@id": "space-01",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "storey-00",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "pset-space-01",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Reception"
+        },
+        {
+            "@id": "space-02",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "storey-00",
+                        "@type": "bot:Storey"
+                    },
+                    {
+                        "@id": "zone-01",
+                        "@type": "brick:Zone"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "pset-space-02",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Meeting Room"
+        },
+        {
+            "@id": "space-03",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "storey-01",
+                        "@type": "bot:Storey"
+                    },
+                    {
+                        "@id": "zone-01",
+                        "@type": "brick:Zone"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "pset-space-03",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Open Office"
+        },
+        {
+            "@id": "space-04",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "storey-01",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "pset-space-04",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Corridor"
+        },
+        {
+            "@id": "pset-space-01",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Pset_SpaceCommon",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "netFloorArea",
+                    "nominalValue": {
+                        "type": "IfcQuantityArea",
+                        "value": 42.0,
+                        "unit": "sqm"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "occupancyType",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "reception",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "pset-space-02",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Pset_SpaceCommon",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "netFloorArea",
+                    "nominalValue": {
+                        "type": "IfcQuantityArea",
+                        "value": 28.5,
+                        "unit": "sqm"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "occupancyType",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "meeting",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "pset-space-03",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Pset_SpaceCommon",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "netFloorArea",
+                    "nominalValue": {
+                        "type": "IfcQuantityArea",
+                        "value": 96.0,
+                        "unit": "sqm"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "occupancyType",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "office",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "pset-space-04",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Pset_SpaceCommon",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "netFloorArea",
+                    "nominalValue": {
+                        "type": "IfcQuantityArea",
+                        "value": 18.0,
+                        "unit": "sqm"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "occupancyType",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "circulation",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "pt-t-01",
+            "@type": "brick:Temperature_Sensor",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "space-01",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Reception air temperature"
+        },
+        {
+            "@id": "pt-t-02",
+            "@type": "brick:Temperature_Sensor",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "space-02",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Meeting Room air temperature"
+        },
+        {
+            "@id": "pt-c-01",
+            "@type": "brick:CO2_Sensor",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "space-02",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Meeting Room CO2"
+        },
+        {
+            "@id": "pt-t-03",
+            "@type": "brick:Temperature_Sensor",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "space-03",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Open Office air temperature"
+        },
+        {
+            "@id": "pt-c-02",
+            "@type": "brick:CO2_Sensor",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "space-03",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Open Office CO2"
+        },
+        {
+            "@id": "pt-h-01",
+            "@type": "brick:Humidity_Sensor",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "space-03",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Open Office relative humidity"
+        },
+        {
+            "@id": "pt-a-01",
+            "@type": "brick:Current_Sensor",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "bld-01",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "Main riser current"
+        },
+        {
+            "@id": "kpiset-2026Q1",
+            "name": "Energy & comfort, 2026 Q1",
+            "@type": "btwin:KPISet",
+            "relationships": {
+                "eko:hasEvaluationTimestep": [
+                    {
+                        "@type": "time:interval",
+                        "time:hasBeginning": "2026-01-01T00:00:00Z",
+                        "time:hasEnd": "2026-03-31T23:59:59Z"
+                    }
+                ],
+                "eko:hasAssociatedObject": [
+                    {
+                        "@id": "bld-01",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "btwin:hasKPIs": {
+                "kpi-eui": {
+                    "@id": "kpi-eui",
+                    "@type": "eko:KPI",
+                    "name": "Energy use intensity",
+                    "relationships": {
+                        "eko:hasAssociatedObject": [
+                            {
+                                "@id": null,
+                                "@type": null
+                            }
+                        ],
+                        "eko:hasEvaluationTimestep": [
+                            {
+                                "@type": "time:interval",
+                                "time:hasBeginning": "2026-01-01T00:00:00Z",
+                                "time:hasEnd": "2026-03-31T23:59:59Z"
+                            }
+                        ]
+                    },
+                    "nominalValue": {
+                        "@type": "eko:KPI",
+                        "value": 31.4,
+                        "unit": "kWh/sqm"
+                    }
+                },
+                "kpi-co2": {
+                    "@id": "kpi-co2",
+                    "@type": "eko:KPI",
+                    "name": "Mean CO2 concentration",
+                    "relationships": {
+                        "eko:hasAssociatedObject": [
+                            {
+                                "@id": null,
+                                "@type": null
+                            }
+                        ],
+                        "eko:hasEvaluationTimestep": [
+                            {
+                                "@type": "time:interval",
+                                "time:hasBeginning": "2026-01-01T00:00:00Z",
+                                "time:hasEnd": "2026-03-31T23:59:59Z"
+                            }
+                        ]
+                    },
+                    "nominalValue": {
+                        "@type": "eko:KPI",
+                        "value": 742.0,
+                        "unit": "ppm"
+                    }
+                },
+                "kpi-comfort": {
+                    "@id": "kpi-comfort",
+                    "@type": "eko:KPI",
+                    "name": "Hours within comfort band",
+                    "relationships": {
+                        "eko:hasAssociatedObject": [
+                            {
+                                "@id": null,
+                                "@type": null
+                            }
+                        ],
+                        "eko:hasEvaluationTimestep": [
+                            {
+                                "@type": "time:interval",
+                                "time:hasBeginning": "2026-01-01T00:00:00Z",
+                                "time:hasEnd": "2026-03-31T23:59:59Z"
+                            }
+                        ]
+                    },
+                    "nominalValue": {
+                        "@type": "eko:KPI",
+                        "value": 1683,
+                        "unit": "h"
+                    }
+                }
+            }
+        },
+        {
+            "@id": "doc-01",
+            "@type": "btwin:Document",
+            "relationships": {
+                "btwin:isDocumentOf": [
+                    {
+                        "@id": "bld-01",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "O&M manual, AHU-1"
+        },
+        {
+            "@id": "doc-02",
+            "@type": "btwin:Document",
+            "relationships": {
+                "btwin:isDocumentOf": [
+                    {
+                        "@id": "space-02",
+                        "@type": "bot:Space"
+                    }
+                ]
+            },
+            "name": "Commissioning report, Meeting Room"
+        }
+    ]
+}

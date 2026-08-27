@@ -44,3 +44,6 @@ site/
 
 # Local working project: real building documents, not part of the package
 myproject/
+
+# Tutorial figures (the same image is embedded in the notebook)
+tutorials/output/*.png
