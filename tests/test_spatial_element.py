@@ -366,8 +366,9 @@ class TestSpatialHierarchyByIFC:
     @staticmethod
     def _model(path):
         """2 storeys, 2 spaces each, and 3 zones: one per flat, one crossing storeys, one stray."""
-        ifcopenshell = pytest.importorskip("ifcopenshell")
+        pytest.importorskip("ifcopenshell")
         pytest.importorskip("ifcopenshell.api")
+        import ifcopenshell
         import ifcopenshell.api
 
         run = ifcopenshell.api.run
