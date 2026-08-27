@@ -106,11 +106,13 @@ class TestCostMeterFormat:
 
 class TestConstructor:
     def test_missing_key_raises(self, monkeypatch):
+        pytest.importorskip("langchain_openai")
         monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
         with pytest.raises(ValueError):
             LLM.Constructor()
 
     def test_invalid_model_type_raises(self):
+        pytest.importorskip("langchain_openai")
         with pytest.raises(TypeError):
             LLM.Constructor(model=123, apiKey="sk-or-test")
 

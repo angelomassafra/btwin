@@ -907,6 +907,7 @@ class TestRDFIndex:
         assert predicates["btwin:hasDocument"] == 1
 
     def test_none_graph_raises(self):
+        pytest.importorskip("rdflib")
         with pytest.raises(ValueError):
             RDF.Index(None)
 
@@ -934,6 +935,7 @@ class TestRDFSchemaSummary:
         assert RDF.SchemaSummary(rdf_graph, index)["text"] == RDF.SchemaSummary(rdf_graph)["text"]
 
     def test_none_graph_raises(self):
+        pytest.importorskip("rdflib")
         with pytest.raises(ValueError):
             RDF.SchemaSummary(None)
 
@@ -977,6 +979,7 @@ class TestRDFSourceNodes:
         assert RDF.SourceNodes(rdf_graph, []) == []
 
     def test_none_graph_raises(self):
+        pytest.importorskip("rdflib")
         with pytest.raises(ValueError):
             RDF.SourceNodes(None, [])
 
@@ -1036,6 +1039,7 @@ class TestSPARQLValidate:
         assert SPARQL.Validate(query, rdf_schema["terms"])[0] is not None
 
     def test_skips_vocabulary_check_without_terms(self):
+        pytest.importorskip("rdflib")
         query = RDF_PREFIXES + "SELECT ?s WHERE { ?s brick:hasSpace ?o }"
         assert SPARQL.Validate(query)[0] is not None
 

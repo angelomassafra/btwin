@@ -911,6 +911,7 @@ class TestValidateUpdate:
         assert checked is None and "brick:Invented" in error
 
     def test_refuses_an_empty_update(self):
+        pytest.importorskip("rdflib")
         assert SPARQL.ValidateUpdate("")[0] is None
 
     def test_a_class_the_graph_lacks_is_legal_in_an_edit(self, rdf_schema):
@@ -1056,5 +1057,6 @@ class TestRDFEditAgentInputValidation:
             Tool.RDFRepairUpdate(object(), "SCHEMA", "req", U_INSERT, "")
 
     def test_apply_needs_a_graph(self):
+        pytest.importorskip("rdflib")
         with pytest.raises(ValueError):
             Tool.RDFApplyUpdate(None, U_INSERT)

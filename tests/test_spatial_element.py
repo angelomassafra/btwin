@@ -469,6 +469,7 @@ class TestSpatialHierarchyByIFC:
                                                 "zones": []}
 
     def test_missing_path_raises(self):
+        pytest.importorskip("ifcopenshell")
         with pytest.raises(ValueError):
             SpatialHierarchy.ByIFC()
 
