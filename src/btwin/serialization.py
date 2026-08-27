@@ -102,6 +102,20 @@ class Serialization():
             "time:interval": iri("time:interval")
         }
 
+        # Point and Equipment carry their own Brick vocabularies, far larger than the
+        # classes spelled out above. Fold them in, so that every type those constructors
+        # accept can also be serialized instead of failing validation at export time.
+        from .equipment import Equipment
+        from .point import Point
+
+        for curie in list(Point.Types()) + list(Equipment.Types()):
+            if curie in classes:
+                continue
+            try:
+                classes[curie] = iri(curie)
+            except (KeyError, ValueError):
+                continue  # a type whose prefix is not declared above cannot be exported
+
         relationshipNames = {
             # Relationships requested
             "brick:hasLocation": iri("brick:hasLocation"),

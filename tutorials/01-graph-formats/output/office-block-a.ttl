@@ -18,10 +18,6 @@
     rdfs:label "Energy & comfort, 2026 Q1" ;
     eko:hasAssociatedObject <https://example.org/officeblocka/bld-01> .
 
-<https://example.org/officeblocka/pt-a-01> a brick:Current_Sensor ;
-    rdfs:label "Main riser current" ;
-    brick:hasLocation <https://example.org/officeblocka/bld-01> .
-
 <https://example.org/officeblocka/pt-c-01> a brick:CO2_Sensor ;
     rdfs:label "Meeting Room CO2" ;
     brick:hasLocation <https://example.org/officeblocka/space-02> .
@@ -29,6 +25,10 @@
 <https://example.org/officeblocka/pt-c-02> a brick:CO2_Sensor ;
     rdfs:label "Open Office CO2" ;
     brick:hasLocation <https://example.org/officeblocka/space-03> .
+
+<https://example.org/officeblocka/pt-e-01> a brick:Energy_Sensor ;
+    rdfs:label "Whole-building electricity" ;
+    brick:hasLocation <https://example.org/officeblocka/bld-01> .
 
 <https://example.org/officeblocka/pt-h-01> a brick:Humidity_Sensor ;
     rdfs:label "Open Office relative humidity" ;
@@ -60,17 +60,17 @@
 
 <https://example.org/officeblocka/pset-space-02> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
-    ifc:HasProperties [ rdfs:label "occupancyType" ;
-            ifc:NominalValue "meeting" ],
-        [ rdfs:label "netFloorArea" ;
-            ifc:NominalValue 2.85e+01 ] .
+    ifc:HasProperties [ rdfs:label "netFloorArea" ;
+            ifc:NominalValue 2.85e+01 ],
+        [ rdfs:label "occupancyType" ;
+            ifc:NominalValue "meeting" ] .
 
 <https://example.org/officeblocka/pset-space-03> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
-    ifc:HasProperties [ rdfs:label "occupancyType" ;
-            ifc:NominalValue "office" ],
-        [ rdfs:label "netFloorArea" ;
-            ifc:NominalValue 9.6e+01 ] .
+    ifc:HasProperties [ rdfs:label "netFloorArea" ;
+            ifc:NominalValue 9.6e+01 ],
+        [ rdfs:label "occupancyType" ;
+            ifc:NominalValue "office" ] .
 
 <https://example.org/officeblocka/pset-space-04> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;

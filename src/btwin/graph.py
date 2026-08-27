@@ -10,12 +10,29 @@ for graphs (LPGs and KGs) in the BTWIN toolkit.
 
 # Dependencies
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Union
 
 # BTWIN modules
+from .equipment import Equipment
+from .point import Point
 from .schema import Schema
+
+
+def _mark(ok: bool) -> str:
+    """
+    Return a tick or a cross, falling back to ASCII where the console cannot encode them.
+
+    A Windows console defaults to cp1252, which raises UnicodeEncodeError on U+2716.
+    """
+    glyph = "✓" if ok else "✖"
+    try:
+        glyph.encode(getattr(sys.stdout, "encoding", None) or "utf-8")
+    except (UnicodeEncodeError, LookupError):
+        return "[ok]" if ok else "[!!]"
+    return glyph
 
 
 # Functions
@@ -594,8 +611,6 @@ class NetworkX():
             )
             if haltOnInvalid and not report.get("ok", False):
                 raise ValueError("NetworkX validation failed; see report for details.")
-            if printReport:
-                print('Report:',report)
         else:
             report = {
                 "ok": True,
@@ -604,11 +619,9 @@ class NetworkX():
                 "counts": {"nodesChecked": 0, "edgesChecked": 0, "invalidNodes": 0, "invalidEdges": 0},
                 "allowed": {"nodeTypes": set(), "edgeTypes": set()},
             }
-            if printReport:
-                print(report)
 
         # --- Done --------------------------------------------------------------
-        return graph
+        return graph, report
 
     @staticmethod
     def CompactKPISets(
@@ -1532,9 +1545,9 @@ class NetworkX():
     @staticmethod
     def ToNEO4J(
         nxGraph=None,
-        NEO4J_URI='neo4j+s://53a5a7ce.databases.neo4j.io',
+        NEO4J_URI=None,
         NEO4J_USERNAME='neo4j',
-        NEO4J_PASSWORD='***',
+        NEO4J_PASSWORD=None,
         wipeDb=False,
         authorDefault='AM',
     ):
@@ -1568,6 +1581,10 @@ class NetworkX():
             raise ValueError("`nxGraph` must be provided.")
         if not isinstance(nxGraph, (nx.Graph, nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph)):
             raise TypeError("`nxGraph` must be a NetworkX graph instance.")
+        if not NEO4J_URI:
+            raise ValueError("`NEO4J_URI` must be provided (e.g. 'bolt://localhost:7687').")
+        if not NEO4J_PASSWORD:
+            raise ValueError("`NEO4J_PASSWORD` must be provided.")
 
         def sanitize_identifier(name: str, prefix: str = "L_") -> str:
             safe = re.sub(r"[:\W]+", "_", str(name))
@@ -1594,17 +1611,36 @@ class NetworkX():
 
         # Optional: P-Sets (best-effort)
         def extract_pset_props(graph, nodeUid: str) -> dict:
-            props = {}
-            try:
-                btwinPsets = NetworkX.NodeLinkedPSets(graph=graph, nodeUID=nodeUid)
-            except Exception:
-                btwinPsets = []
+            """
+            Collect the property values of every PSet linked to a node.
+
+            AddNodeByObject flattens a PSet's properties onto the PSet node, so the values
+            are ordinary attributes; with keepPSetMetadata=True the original
+            'ifc:HasProperties' list is kept alongside them. Read both.
+            """
+            props: dict = {}
+            psetOwnKeys = {"id", "type", "name", "@id", "@type",
+                           "ifc:HasProperties", "hasProperties", "relationships"}
+
+            btwinPsets = NetworkX.NodeLinkedPSets(nxGraph=graph, nodeObjectUID=nodeUid)
             for pset in btwinPsets or []:
                 if not isinstance(pset, (list, tuple)) or len(pset) < 2:
                     continue
-                for prop in (pset[1].get('hasProperties') or []):
-                    key = prop.get('name')
-                    val = (prop.get('nominalValue') or {}).get('value')
+                attrs = pset[1] or {}
+
+                # Flattened form: every attribute that is not PSet bookkeeping is a property.
+                for key, val in attrs.items():
+                    if key in psetOwnKeys:
+                        continue
+                    props[sanitize_prop_key(key)] = to_json_safe(val)
+
+                # Structured form, when the original IFC metadata was kept.
+                structured = attrs.get("ifc:HasProperties") or attrs.get("hasProperties") or []
+                for prop in structured:
+                    if not isinstance(prop, dict):
+                        continue
+                    key = prop.get("name")
+                    val = (prop.get("nominalValue") or {}).get("value")
                     if key is not None:
                         props[sanitize_prop_key(key)] = to_json_safe(val)
             return props
@@ -2084,6 +2120,13 @@ class NetworkX():
         except Exception as exc:
             raise TypeError("Failed to load class types from schemaProvider.Types().") from exc
 
+        # Schema.Types() covers spatial and structural classes only; the concrete Brick
+        # classes that Point and Equipment hand out live in their own vocabularies. Union
+        # them in, or every sensor and every asset in the graph reports as invalid.
+        # A caller who supplied their own provider gets exactly what that provider allows.
+        if schemaProvider is None:
+            allowedNodeTypes |= set(Point.Types()) | set(Equipment.Types())
+
         allowedEdgeTypes: Set[str] = set(relNames or [])
 
         # --- Prepare report containers -----------------------------------------
@@ -2166,7 +2209,7 @@ class NetworkX():
 
         # --- Optional printing -------------------------------------------------
         if printReport and not report["ok"]:
-            print("✖ NetworkX validation failed")
+            print(f"{_mark(False)} NetworkX validation failed")
             if invalidNodes:
                 print(f"  Invalid nodes ({len(invalidNodes)}/{nodesChecked} checked):")
                 for n in invalidNodes:
@@ -2177,9 +2220,9 @@ class NetworkX():
                     keyStr = f", key={e['key']!r}" if e['key'] is not None else ""
                     print(f"    - {e['u']!r} -> {e['v']!r}{keyStr} type={e['foundType']!r} : {e['reason']}")
         elif printReport and report["ok"]:
-            print("✓ NetworkX validation passed (all node/edge types are valid).")
+            print(f"{_mark(True)} NetworkX validation passed (all node/edge types are valid).")
 
-        return nxGraph
+        return report
 
 class RDF():
 
@@ -2429,6 +2472,35 @@ class RDF():
                         print("Warning:", msg); continue
                     tgtId = tgt.get("@id")
                     if not isinstance(tgtId, str) or not tgtId.strip():
+                        # A target with a '@type' but no '@id' is a blank node, not an error.
+                        # BTwin's own serializer emits one for the time interval under
+                        # eko:hasEvaluationTimestep, so rejecting it made strict mode refuse
+                        # documents this package had just written. Mint the blank node and
+                        # hang its type and scalar fields off it.
+                        tgtType = tgt.get("@type")
+                        if isinstance(tgtType, str) and tgtType.strip():
+                            blank = BNode()
+                            rdfGraph.add((subj, namespaces[pfx][local], blank))
+                            try:
+                                tPfx, tLocal = split_curie(tgtType)
+                                if tPfx in namespaces:
+                                    rdfGraph.add((blank, RDF.type, namespaces[tPfx][tLocal]))
+                            except ValueError:
+                                pass
+                            for field, fieldValue in tgt.items():
+                                if field in {"@id", "@type"}:
+                                    continue
+                                if not isinstance(fieldValue, (str, int, float, bool)):
+                                    continue
+                                try:
+                                    fPfx, fLocal = split_curie(field)
+                                except ValueError:
+                                    continue
+                                if fPfx in namespaces:
+                                    rdfGraph.add(
+                                        (blank, namespaces[fPfx][fLocal], Literal(fieldValue)))
+                            continue
+
                         msg = f"Target under '{predCurie}' missing non-empty '@id'."
                         if strict: raise ValueError(msg)
                         print("Warning:", msg); continue

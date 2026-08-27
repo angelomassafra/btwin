@@ -127,3 +127,39 @@ class TestJSONLDByObjects:
         # Should not raise
         jsonld = Serialization.JSONLDByObjects(objects=[obj], strictValidation=False)
         assert len(jsonld["@graph"]) == 1
+
+
+class TestVocabularyCoversConstructors:
+    """
+    Every type the constructors accept must also be exportable.
+
+    Before 0.5.5 the export context declared 10 of Point's 54 types and 3 of
+    Equipment's 93, so a Point built with e.g. 'brick:Energy_Sensor' constructed
+    happily and then failed at JSONLDByObjects.
+    """
+
+    def test_every_point_type_is_declared(self):
+        from btwin import Point
+
+        classes = Serialization.IRIs()["classes"]
+        assert sorted(set(Point.Types()) - set(classes)) == []
+
+    def test_every_equipment_type_is_declared(self):
+        from btwin import Equipment
+
+        classes = Serialization.IRIs()["classes"]
+        assert sorted(set(Equipment.Types()) - set(classes)) == []
+
+    def test_sensor_type_survives_strict_export(self):
+        from btwin import Point
+
+        sensor = Point.Constructor("pt-1", "brick:Energy_Sensor", "Main meter")
+        jsonld = Serialization.JSONLDByObjects([sensor], strictValidation=True)
+        assert jsonld["@graph"][0]["@type"] == "brick:Energy_Sensor"
+
+    def test_equipment_type_survives_strict_export(self):
+        from btwin import Equipment
+
+        boiler = Equipment.Constructor("eq-1", "brick:Boiler", "Boiler 1")
+        jsonld = Serialization.JSONLDByObjects([boiler], strictValidation=True)
+        assert jsonld["@graph"][0]["@type"] == "brick:Boiler"

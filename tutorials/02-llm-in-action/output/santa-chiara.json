@@ -5,136 +5,136 @@
   },
   "@graph": [
     {
-      "@id": "SC-CLINIC",
+      "@id": "BLDG",
       "@type": "bot:Building",
       "name": "Santa Chiara Outpatient Clinic",
       "relationships": {}
     },
     {
-      "@id": "SC-CLINIC-F0",
+      "@id": "BLDG-F1",
       "@type": "bot:Storey",
       "name": "Ground Floor",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC",
+            "@id": "BLDG",
             "@type": "bot:Building"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F1",
+      "@id": "BLDG-F2",
       "@type": "bot:Storey",
       "name": "First Floor",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC",
+            "@id": "BLDG",
             "@type": "bot:Building"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F0-WR",
+      "@id": "BLDG-F1-S1",
       "@type": "bot:Space",
       "name": "Waiting Room",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F0",
+            "@id": "BLDG-F1",
             "@type": "bot:Storey"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F0-CR",
+      "@id": "BLDG-F1-S2",
       "@type": "bot:Space",
       "name": "Consulting Room",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F0",
+            "@id": "BLDG-F1",
             "@type": "bot:Storey"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F1-LAB",
+      "@id": "BLDG-F2-S1",
       "@type": "bot:Space",
       "name": "Laboratory",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F1",
+            "@id": "BLDG-F2",
             "@type": "bot:Storey"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F1-OFF",
+      "@id": "BLDG-F2-S2",
       "@type": "bot:Space",
       "name": "Small Office",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F1",
+            "@id": "BLDG-F2",
             "@type": "bot:Storey"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F0-WR-TS1",
+      "@id": "BLDG-F1-S1-T1",
       "@type": "brick:Temperature_Sensor",
-      "name": "Temperature Sensor 1",
+      "name": "Waiting Room Temperature Sensor",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F0-WR",
+            "@id": "BLDG-F1-S1",
             "@type": "bot:Space"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F0-WR-CO2S1",
+      "@id": "BLDG-F1-S1-C1",
       "@type": "brick:CO2_Sensor",
-      "name": "CO2 Sensor 1",
+      "name": "Waiting Room CO2 Sensor",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F0-WR",
+            "@id": "BLDG-F1-S1",
             "@type": "bot:Space"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F0-CR-TS1",
+      "@id": "BLDG-F1-S2-T1",
       "@type": "brick:Temperature_Sensor",
-      "name": "Temperature Sensor 2",
+      "name": "Consulting Room Temperature Sensor",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F0-CR",
+            "@id": "BLDG-F1-S2",
             "@type": "bot:Space"
           }
         ]
       }
     },
     {
-      "@id": "SC-CLINIC-F1-LAB-HS1",
+      "@id": "BLDG-F2-S1-H1",
       "@type": "brick:Humidity_Sensor",
-      "name": "Humidity Sensor 1",
+      "name": "Laboratory Humidity Sensor",
       "relationships": {
         "brick:hasLocation": [
           {
-            "@id": "SC-CLINIC-F1-LAB",
+            "@id": "BLDG-F2-S1",
             "@type": "bot:Space"
           }
         ]

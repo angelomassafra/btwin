@@ -309,8 +309,8 @@
             "name": "Open Office relative humidity"
         },
         {
-            "@id": "pt-a-01",
-            "@type": "brick:Current_Sensor",
+            "@id": "pt-e-01",
+            "@type": "brick:Energy_Sensor",
             "relationships": {
                 "brick:hasLocation": [
                     {
@@ -319,7 +319,7 @@
                     }
                 ]
             },
-            "name": "Main riser current"
+            "name": "Whole-building electricity"
         },
         {
             "@id": "kpiset-2026Q1",

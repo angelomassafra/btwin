@@ -128,7 +128,7 @@ class TestByJSONLD:
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         assert "site-01" in G.nodes
         assert "bldg-01" in G.nodes
         assert G.number_of_edges() >= 1
@@ -144,7 +144,7 @@ class TestToJSONAndByJSON:
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
 
         out = tmp_path / "graph.json"
         NetworkX.ToJSON(G, savePath=str(out))
@@ -160,7 +160,7 @@ class TestSubgraphByObjectTypes:
             objects=[site_obj, building_obj, storey_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         sub = NetworkX.SubgraphByObjectTypes(G, objectTypes=["bot:Site"])
         assert "site-01" in sub.nodes
         assert "bldg-01" not in sub.nodes
@@ -176,7 +176,7 @@ class TestSubgraphByObjectUID:
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         sub = NetworkX.SubgraphByObjectUID(G, objectUID="bldg-01", nodeDegree=1)
         assert "bldg-01" in sub.nodes
 
@@ -187,7 +187,7 @@ class TestIsolatedNodes:
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         isolated = NetworkX.IsolatedNodes(G)
         # Both nodes have no edges between them in this setup
         assert isinstance(isolated, list)
@@ -201,7 +201,7 @@ class TestIsolatedNodes:
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         isolated = NetworkX.IsolatedNodes(G)
         assert len(isolated) == 0
 
@@ -216,21 +216,22 @@ class TestValidate:
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
-        import networkx as nx
-        result = NetworkX.Validate(G, printReport=False)
-        # Validate returns the graph itself
-        assert isinstance(result, (nx.Graph, nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph))
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["ok"] is True
+        assert report["invalidNodes"] == []
+        assert report["invalidEdges"] == []
+        assert report["counts"]["nodesChecked"] == G.number_of_nodes()
 
     def test_validate_does_not_raise_on_valid(self, site_obj):
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj],
             strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         # Should not raise
-        result = NetworkX.Validate(G, printReport=False)
-        assert result is G
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["ok"] is True
 
 
 class TestConstructorAdvanced:
@@ -324,7 +325,7 @@ class TestByJSONLDAdvanced:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=True, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=True, printReport=False)
         assert G.number_of_nodes() == 2
 
     def test_missing_input_raises(self):
@@ -342,14 +343,14 @@ class TestByJSONLDAdvanced:
         )
         p = tmp_path / "test.json"
         p.write_text(json.dumps(jsonld))
-        G = NetworkX.ByJSONLD(jsonPath=str(p), validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonPath=str(p), validateGraph=False, printReport=False)
         assert "site-01" in G.nodes
 
     def test_digraph_type(self, site_obj):
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, graphType="DiGraph", validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, graphType="DiGraph", validateGraph=False, printReport=False)
         import networkx as nx
         assert isinstance(G, nx.DiGraph)
 
@@ -390,7 +391,7 @@ class TestSubgraphByObjectTypesAdvanced:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         sub = NetworkX.SubgraphByObjectTypes(G, objectTypes=["bot:Storey"])
         assert sub.number_of_nodes() == 0
 
@@ -410,7 +411,7 @@ class TestSubgraphByObjectTypesAdvanced:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         sub = NetworkX.SubgraphByObjectTypes(
             G, objectTypes=["bot:Site", "bot:Building"], keepIsolates=False,
         )
@@ -438,7 +439,7 @@ class TestValidateAdvanced:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         # Should not raise
         NetworkX.Validate(G, printReport=True)
 
@@ -588,7 +589,7 @@ class TestSubgraphByObjectUIDAdvanced:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         sub = NetworkX.SubgraphByObjectUID(G, objectUID="bldg-01", nodeDegree=2)
         assert "bldg-01" in sub.nodes
 
@@ -636,16 +637,18 @@ class TestValidateDetailed:
         import networkx as nx
         G = nx.MultiDiGraph()
         G.add_node("n1", type="invalid:Type")
-        result = NetworkX.Validate(G, printReport=False)
-        # result is the graph itself
-        assert isinstance(result, nx.MultiDiGraph)
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["ok"] is False
+        assert [n["id"] for n in report["invalidNodes"]] == ["n1"]
+        assert report["invalidNodes"][0]["foundType"] == "invalid:Type"
 
     def test_missing_node_type_reported(self):
         import networkx as nx
         G = nx.MultiDiGraph()
         G.add_node("n1")  # no type attribute
-        result = NetworkX.Validate(G, printReport=True)
-        assert isinstance(result, nx.MultiDiGraph)
+        report = NetworkX.Validate(G, printReport=True)
+        assert report["ok"] is False
+        assert [n["id"] for n in report["invalidNodes"]] == ["n1"]
 
     def test_invalid_edge_types_multigraph(self):
         import networkx as nx
@@ -653,8 +656,10 @@ class TestValidateDetailed:
         G.add_node("n1", type="bot:Site")
         G.add_node("n2", type="bot:Building")
         G.add_edge("n1", "n2", type="invalid:rel")
-        result = NetworkX.Validate(G, printReport=True)
-        assert isinstance(result, nx.MultiDiGraph)
+        report = NetworkX.Validate(G, printReport=True)
+        assert report["ok"] is False
+        assert report["invalidNodes"] == []
+        assert [e["foundType"] for e in report["invalidEdges"]] == ["invalid:rel"]
 
     def test_digraph_edge_validation(self):
         import networkx as nx
@@ -662,8 +667,9 @@ class TestValidateDetailed:
         G.add_node("n1", type="bot:Site")
         G.add_node("n2", type="bot:Building")
         G.add_edge("n1", "n2", type="invalid:rel")
-        result = NetworkX.Validate(G, printReport=False)
-        assert isinstance(result, nx.DiGraph)
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["ok"] is False
+        assert [e["foundType"] for e in report["invalidEdges"]] == ["invalid:rel"]
 
     def test_missing_edge_type_reported(self):
         import networkx as nx
@@ -671,17 +677,18 @@ class TestValidateDetailed:
         G.add_node("n1", type="bot:Site")
         G.add_node("n2", type="bot:Building")
         G.add_edge("n1", "n2")  # no type
-        result = NetworkX.Validate(G, printReport=False)
-        assert isinstance(result, nx.DiGraph)
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["ok"] is False
+        assert report["counts"]["invalidEdges"] == 1
 
     def test_valid_graph_prints_success(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
-        result = NetworkX.Validate(G, printReport=True)
-        assert result is G
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        report = NetworkX.Validate(G, printReport=True)
+        assert report["ok"] is True
 
 
 class TestCompactPSets:
@@ -818,7 +825,7 @@ class TestNodeLinkedNodes:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         linked = NetworkX.NodeLinkedNodes(G, nodeObjectUID="site-01")
         assert isinstance(linked, list)
 
@@ -827,7 +834,7 @@ class TestNodeLinkedNodes:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         linked = NetworkX.NodeLinkedNodes(G, nodeNumber="site-01")
         assert isinstance(linked, list)
 
@@ -836,7 +843,7 @@ class TestNodeLinkedNodes:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         linked = NetworkX.NodeLinkedNodes(G, nodeObjectUID="site-01",
                                           linkedNodesType="bot:Building")
         assert isinstance(linked, list)
@@ -846,7 +853,7 @@ class TestNodeLinkedNodes:
         jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
-        G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
         linked = NetworkX.NodeLinkedNodes(G, nodeObjectUID="site-01",
                                           relationshipName="brick:hasLocation")
         assert isinstance(linked, list)
@@ -860,7 +867,7 @@ class TestByJSONLDFromFile:
         )
         p = tmp_path / "test.json"
         p.write_text(json.dumps(jsonld))
-        G = NetworkX.ByJSONLD(jsonPath=str(p), validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonPath=str(p), validateGraph=False, printReport=False)
         assert "site-01" in G.nodes
 
     def test_with_existing_graph(self, site_obj, building_obj):
@@ -869,7 +876,7 @@ class TestByJSONLDFromFile:
             objects=[site_obj, building_obj], strictValidation=False,
         )
         existing = nx.MultiDiGraph()
-        G = NetworkX.ByJSONLD(jsonld=jsonld, graph=existing, validateGraph=False, printReport=False)
+        G, _ = NetworkX.ByJSONLD(jsonld=jsonld, graph=existing, validateGraph=False, printReport=False)
         assert G is existing
         assert "site-01" in G.nodes
 

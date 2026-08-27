@@ -4,6 +4,7 @@
 @prefix eko: <http://energy.linkeddata.es/em-kpi/ontology#> .
 @prefix ifc: <https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix time1: <https://www.w3.org/TR/2022/CRD-owl-time-20221115#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 <https://example.org/officeblocka/doc-01> a btwin:Document ;
@@ -16,11 +17,10 @@
 
 <https://example.org/officeblocka/kpiset-2026Q1> a btwin:KPISet ;
     rdfs:label "Energy & comfort, 2026 Q1" ;
-    eko:hasAssociatedObject <https://example.org/officeblocka/bld-01> .
-
-<https://example.org/officeblocka/pt-a-01> a brick:Current_Sensor ;
-    rdfs:label "Main riser current" ;
-    brick:hasLocation <https://example.org/officeblocka/bld-01> .
+    eko:hasAssociatedObject <https://example.org/officeblocka/bld-01> ;
+    eko:hasEvaluationTimestep [ a time1:interval ;
+            time1:hasBeginning "2026-01-01T00:00:00Z" ;
+            time1:hasEnd "2026-03-31T23:59:59Z" ] .
 
 <https://example.org/officeblocka/pt-c-01> a brick:CO2_Sensor ;
     rdfs:label "Meeting Room CO2" ;
@@ -29,6 +29,10 @@
 <https://example.org/officeblocka/pt-c-02> a brick:CO2_Sensor ;
     rdfs:label "Open Office CO2" ;
     brick:hasLocation <https://example.org/officeblocka/space-03> .
+
+<https://example.org/officeblocka/pt-e-01> a brick:Energy_Sensor ;
+    rdfs:label "Whole-building electricity" ;
+    brick:hasLocation <https://example.org/officeblocka/bld-01> .
 
 <https://example.org/officeblocka/pt-h-01> a brick:Humidity_Sensor ;
     rdfs:label "Open Office relative humidity" ;
@@ -64,12 +68,12 @@
 <https://example.org/officeblocka/pset-space-02> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "meeting" ],
+        [ a ifc:IfcPropertySingleValue ;
             rdfs:label "netFloorArea" ;
             ifc:NominalValue 2.85e+01 ;
-            ifc:Unit "sqm" ],
-        [ a ifc:IfcPropertySingleValue ;
-            rdfs:label "occupancyType" ;
-            ifc:NominalValue "meeting" ] .
+            ifc:Unit "sqm" ] .
 
 <https://example.org/officeblocka/pset-space-03> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
@@ -84,12 +88,12 @@
 <https://example.org/officeblocka/pset-space-04> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
-            rdfs:label "occupancyType" ;
-            ifc:NominalValue "circulation" ],
-        [ a ifc:IfcPropertySingleValue ;
             rdfs:label "netFloorArea" ;
             ifc:NominalValue 1.8e+01 ;
-            ifc:Unit "sqm" ] .
+            ifc:Unit "sqm" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "circulation" ] .
 
 <https://example.org/officeblocka/space-01> a bot:Space ;
     rdfs:label "Reception" ;

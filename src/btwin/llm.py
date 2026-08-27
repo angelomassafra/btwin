@@ -1890,10 +1890,17 @@ class Cycle():
                 print(f"[agent 4] rejected ({attempts}/{maxRepairs + 1}): {error}")
             if attempts > maxRepairs:
                 raise ValueError(f"No runnable query after {attempts} attempt(s). Last error: {error}")
+            previous = sparql
             sparql = Tool.RDFRepairSPARQL(llm, schema["text"], prompt, sparql, error, meter)
             if verbose:
                 print(f"[agent 4] {CostMeter.Describe(meter.calls[-1])}")
                 print(f"[agent 4] repaired query:\n{sparql}")
+            if sparql.strip() == previous.strip():
+                raise ValueError(
+                    f"Repair stalled after {attempts} attempt(s): the model returned the query "
+                    f"it was just asked to fix, so further retries would be identical. Raise "
+                    f"`temperature` on the LLM so retries can differ, or rephrase the question. "
+                    f"Last error: {error}")
 
         if verbose:
             print("[agent 4] accepted")
@@ -2018,10 +2025,17 @@ class Cycle():
                 raise ValueError(
                     f"No valid document after {attempts} attempt(s). Last error: {error}")
 
+            previous = document
             document = Tool.JSONLDRepair(
                 llm, vocabularyText, notationText, prompt, document, error, meter)
             if verbose:
                 print(f"[agent 2] {CostMeter.Describe(meter.calls[-1])}")
+            if document.strip() == previous.strip():
+                raise ValueError(
+                    f"Repair stalled after {attempts} attempt(s): the model returned the "
+                    f"document it was just asked to fix, so further retries would be identical. "
+                    f"Raise `temperature` on the LLM so retries can differ, or reword the "
+                    f"prompt. Last error: {error}")
 
         raise ValueError("Unreachable.")   # the loop above either returns or raises
 
@@ -2264,8 +2278,15 @@ class Cycle():
             if attempts > maxRepairs:
                 raise ValueError(f"No valid edit after {attempts} attempt(s). Last error: {error}")
 
+            previous = reply
             reply = Tool.JSONLDEditRepair(
                 llm, vocabularyText, documentText, prompt, reply, error, meter)
+            if reply.strip() == previous.strip():
+                raise ValueError(
+                    f"Repair stalled after {attempts} attempt(s): the model returned the patch "
+                    f"it was just asked to fix, so further retries would be identical. Raise "
+                    f"`temperature` on the LLM so retries can differ, or reword the request. "
+                    f"Last error: {error}")
             if verbose:
                 print(f"[agent 2] {CostMeter.Describe(meter.calls[-1])}")
 
@@ -2379,10 +2400,17 @@ class Cycle():
                 print(f"[agent 4] rejected ({attempts}/{maxRepairs + 1}): {error}")
             if attempts > maxRepairs:
                 raise ValueError(f"No runnable update after {attempts} attempt(s). Last error: {error}")
+            previous = sparql
             sparql = Tool.RDFRepairUpdate(llm, grounding, prompt, sparql, error, meter)
             if verbose:
                 print(f"[agent 4] {CostMeter.Describe(meter.calls[-1])}")
                 print(f"[agent 4] repaired update:\n{sparql}")
+            if sparql.strip() == previous.strip():
+                raise ValueError(
+                    f"Repair stalled after {attempts} attempt(s): the model returned the update "
+                    f"it was just asked to fix, so further retries would be identical. Raise "
+                    f"`temperature` on the LLM so retries can differ, or phrase the request as "
+                    f"something expressible in one operation. Last error: {error}")
 
         # An update that changes nothing is this cycle's empty SELECT: legal vocabulary, clean
         # parse, a pattern the data does not hold. Keep a rewrite only when it actually moves

@@ -148,8 +148,8 @@
     {
       "key": 0,
       "objectType": "bot:Building",
-      "source": "pt-a-01",
-      "subjectType": "brick:Current_Sensor",
+      "source": "pt-e-01",
+      "subjectType": "brick:Energy_Sensor",
       "target": "bld-01",
       "type": "brick:hasLocation"
     },
@@ -280,9 +280,9 @@
       "type": "brick:Humidity_Sensor"
     },
     {
-      "id": "pt-a-01",
-      "name": "Main riser current",
-      "type": "brick:Current_Sensor"
+      "id": "pt-e-01",
+      "name": "Whole-building electricity",
+      "type": "brick:Energy_Sensor"
     },
     {
       "Energy use intensity": 31.4,

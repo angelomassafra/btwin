@@ -348,7 +348,7 @@ class TestJSONLDCreateByPrompt:
     def test_result_builds_a_graph(self, monkeypatch, document):
         self._stub(monkeypatch, document)
         result = Cycle.JSONLDCreateByPrompt("a building", llm=object())
-        graph = NetworkX.ByJSONLD(jsonld=result["jsonld"], validateGraph=False, printReport=False)
+        graph, _ = NetworkX.ByJSONLD(jsonld=result["jsonld"], validateGraph=False, printReport=False)
         assert graph.number_of_nodes() == 15
         assert graph.number_of_edges() == 14        # every node but the building has a parent
         assert NetworkX.IsolatedNodes(graph) == []
@@ -809,7 +809,7 @@ class TestJSONLDEditByPrompt:
     def test_result_builds_a_graph(self, monkeypatch, edited):
         self._stub(monkeypatch, json.dumps(SENSOR_PATCH))
         result = Cycle.JSONLDEditByPrompt(edited, "add a CO2 sensor", llm=object())
-        graph = NetworkX.ByJSONLD(jsonld=result["jsonld"], validateGraph=False, printReport=False)
+        graph, _ = NetworkX.ByJSONLD(jsonld=result["jsonld"], validateGraph=False, printReport=False)
         assert graph.number_of_nodes() == 16 and NetworkX.IsolatedNodes(graph) == []
 
     def test_repairs_a_rejected_patch(self, monkeypatch, edited):
