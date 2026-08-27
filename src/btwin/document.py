@@ -5,7 +5,7 @@ DOCUMENT MODULE
 This module defines the Document class, which provides the base representation
 for creating document objects in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 # Dependencies
@@ -100,6 +100,59 @@ class Document():
         if not isinstance(relationships, dict):
             raise KeyError("documentObject['relationships'] must be a dict.")
         return relationships
+
+    @staticmethod
+    def SetPSet(
+        documentObject: Dict[str, Any],
+        *,
+        pset: Optional[Dict[str, Any]] = None,
+        psetUID: Optional[str] = None,
+        append: bool = True,
+        avoidDuplicates: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Set the **ifc:HasPropertySets** relationship for a Document.
+
+        Args:
+            documentObject: Document dict to update.
+            pset: Optional Property Set dict, as built by 'PropertySet.Constructor()'.
+                  UID resolved from ['@id','id','UID'].
+            psetUID: Fallback UID if not present in 'pset'.
+            append: If True, appends; if False, overwrites the relation list.
+            avoidDuplicates: If True, avoids inserting identical {'@id','@type'} pairs.
+
+        Returns:
+            dict: The updated documentObject with 'ifc:HasPropertySets' set.
+
+        Raises:
+            TypeError: If inputs are invalid types.
+            ValueError: If UID cannot be resolved.
+        """
+        # Resolve UID from pset or fallback
+        resolvedUID = None
+        if pset is not None:
+            if not isinstance(pset, dict):
+                raise TypeError("pset must be a dict if provided.")
+            for key in ("@id", "id", "UID"):
+                val = pset.get(key)
+                if isinstance(val, str) and val.strip():
+                    resolvedUID = val
+                    break
+
+        resolvedUID = resolvedUID or psetUID
+
+        if not isinstance(resolvedUID, str) or not resolvedUID.strip():
+            raise ValueError("Property Set UID is required (via pset or psetUID).")
+
+        # Delegate to SetRelationship enforcing predicate and IFC property set type
+        return Document.SetRelationship(
+            documentObject=documentObject,
+            relationshipName="ifc:HasPropertySets",
+            linkedObjectUID=resolvedUID,
+            linkedObjectType="ifc:IfcPropertySet",
+            append=append,
+            avoidDuplicates=avoidDuplicates,
+        )
 
     @staticmethod
     def SetRelationship(

@@ -1,7 +1,63 @@
 
 import pytest
 
-from btwin import NetworkX, Serialization, SpatialElement
+from btwin import RDF, SPARQL, NetworkX, Serialization, SpatialElement
+
+# --- RDF fixtures ---------------------------------------------------------------------
+# A miniature of the graph main.py builds: a spatial hierarchy, two spaces sharing a label,
+# and an energy index reachable only through blank nodes.
+RDF_BASE_IRI = "https://example.org/test/"
+RDF_TURTLE = """
+@prefix bot: <https://w3id.org/bot#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix btwin: <btwin#> .
+@prefix ifc: <https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<site-01> a bot:Site ; rdfs:label "Lotto" .
+<bldg-01> a bot:Building ; brick:hasLocation <site-01> .
+<storey-01> a bot:Storey ; rdfs:label "Piano Primo" ; brick:hasLocation <bldg-01> .
+<space-01> a bot:Space ; rdfs:label "Camera" ; brick:hasLocation <storey-01>, <zone-01> .
+<space-02> a bot:Space ; rdfs:label "Camera" ; brick:hasLocation <storey-01>, <zone-01> .
+<space-03> a bot:Space ; rdfs:label "Cucina" ; brick:hasLocation <storey-01>, <zone-01> .
+<zone-01> a brick:Zone ; rdfs:label "Appartamento" ;
+    brick:hasLocation <bldg-01>, <storey-01> ; btwin:hasDocument <doc-01> .
+<doc-01> a btwin:Document ; rdfs:label "APE.pdf" ; ifc:HasPropertySets <pset-01> .
+<pset-01> a ifc:IfcPropertySet ; rdfs:label "Indici" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+        rdfs:label "EPgl,nren" ; ifc:NominalValue 66.98 ; ifc:Unit "kWh/m2 anno" ] .
+"""
+
+RDF_PREFIXES = """PREFIX bot: <https://w3id.org/bot#>
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX btwin: <https://example.org/test/btwin#>
+PREFIX ifc: <https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+"""
+
+Q_SPACES = RDF_PREFIXES + "SELECT ?s ?name WHERE { ?s a bot:Space ; rdfs:label ?name . }"
+Q_ASK = RDF_PREFIXES + "ASK { <https://example.org/test/site-01> a bot:Site }"
+Q_INDEX = RDF_PREFIXES + """SELECT ?label ?value ?unit WHERE {
+  <https://example.org/test/zone-01> btwin:hasDocument ?doc .
+  ?doc ifc:HasPropertySets ?pset . ?pset ifc:HasProperties ?p .
+  ?p rdfs:label ?label ; ifc:NominalValue ?value ; ifc:Unit ?unit . } LIMIT 100"""
+# Legal vocabulary, clean parse, invented hop: matches nothing
+Q_WRONG = RDF_PREFIXES + """SELECT ?label WHERE {
+  <https://example.org/test/zone-01> btwin:hasDocument ?doc .
+  ?doc btwin:hasDocument ?other . ?other rdfs:label ?label . } LIMIT 100"""
+
+
+@pytest.fixture
+def rdf_graph(tmp_path):
+    pytest.importorskip("rdflib")
+    ttl = tmp_path / "test.ttl"
+    ttl.write_text(RDF_TURTLE, encoding="utf-8")
+    return RDF.ByTTL(ttl, baseIRI=RDF_BASE_IRI)
+
+
+@pytest.fixture
+def rdf_schema(rdf_graph):
+    return RDF.SchemaSummary(rdf_graph)
 
 
 class TestConstructor:
@@ -68,7 +124,7 @@ class TestByJSONLD:
             spatialElementObject=building_obj,
             linkedObject=site_obj,
         )
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -84,7 +140,7 @@ class TestToJSONAndByJSON:
             spatialElementObject=building_obj,
             linkedObject=site_obj,
         )
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -100,7 +156,7 @@ class TestToJSONAndByJSON:
 
 class TestSubgraphByObjectTypes:
     def test_filter_by_type(self, site_obj, building_obj, storey_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj, storey_obj],
             strictValidation=False,
         )
@@ -116,7 +172,7 @@ class TestSubgraphByObjectUID:
             spatialElementObject=building_obj,
             linkedObject=site_obj,
         )
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -127,7 +183,7 @@ class TestSubgraphByObjectUID:
 
 class TestIsolatedNodes:
     def test_detects_isolated(self, site_obj, building_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -141,7 +197,7 @@ class TestIsolatedNodes:
             spatialElementObject=building_obj,
             linkedObject=site_obj,
         )
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -156,7 +212,7 @@ class TestValidate:
             spatialElementObject=building_obj,
             linkedObject=site_obj,
         )
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -167,7 +223,7 @@ class TestValidate:
         assert isinstance(result, (nx.Graph, nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph))
 
     def test_validate_does_not_raise_on_valid(self, site_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj],
             strictValidation=False,
         )
@@ -265,7 +321,7 @@ class TestAddEdgesByObjectAdvanced:
 class TestByJSONLDAdvanced:
     def test_with_validation(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=True, printReport=False)
@@ -281,7 +337,7 @@ class TestByJSONLDAdvanced:
 
     def test_from_file(self, tmp_path, site_obj):
         import json
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj], strictValidation=False,
         )
         p = tmp_path / "test.json"
@@ -290,7 +346,7 @@ class TestByJSONLDAdvanced:
         assert "site-01" in G.nodes
 
     def test_digraph_type(self, site_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, graphType="DiGraph", validateGraph=False, printReport=False)
@@ -331,7 +387,7 @@ class TestByJSONAdvanced:
 
 class TestSubgraphByObjectTypesAdvanced:
     def test_no_match_returns_empty(self, site_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -351,7 +407,7 @@ class TestSubgraphByObjectTypesAdvanced:
             NetworkX.SubgraphByObjectTypes(G, objectTypes=[])
 
     def test_keep_isolates_false(self, site_obj, building_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -379,7 +435,7 @@ class TestValidateAdvanced:
 
     def test_with_print_report(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -529,7 +585,7 @@ class TestSubgraphByObjectUIDAdvanced:
 
     def test_resolve_by_attribute(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -620,7 +676,7 @@ class TestValidateDetailed:
 
     def test_valid_graph_prints_success(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -759,7 +815,7 @@ class TestNodeLinkedNodes:
 
     def test_basic_linked_nodes(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -768,7 +824,7 @@ class TestNodeLinkedNodes:
 
     def test_by_node_number(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -777,7 +833,7 @@ class TestNodeLinkedNodes:
 
     def test_filter_by_type(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -787,7 +843,7 @@ class TestNodeLinkedNodes:
 
     def test_filter_by_relationship(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         G = NetworkX.ByJSONLD(jsonld=jsonld, validateGraph=False, printReport=False)
@@ -799,7 +855,7 @@ class TestNodeLinkedNodes:
 class TestByJSONLDFromFile:
     def test_from_file_path(self, tmp_path, site_obj):
         import json
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj], strictValidation=False,
         )
         p = tmp_path / "test.json"
@@ -809,10 +865,188 @@ class TestByJSONLDFromFile:
 
     def test_with_existing_graph(self, site_obj, building_obj):
         import networkx as nx
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj], strictValidation=False,
         )
         existing = nx.MultiDiGraph()
         G = NetworkX.ByJSONLD(jsonld=jsonld, graph=existing, validateGraph=False, printReport=False)
         assert G is existing
         assert "site-01" in G.nodes
+
+
+class TestRDFCompact:
+    def test_shortens_known_namespace(self, rdf_graph):
+        from rdflib import URIRef
+        assert RDF.Compact(rdf_graph, URIRef("https://w3id.org/bot#Space")) == "bot:Space"
+
+    def test_leaves_unknown_namespace(self, rdf_graph):
+        from rdflib import URIRef
+        unknown = "https://unknown.example/Thing"
+        assert RDF.Compact(rdf_graph, URIRef(unknown)) == unknown
+
+    def test_none_graph_raises(self):
+        with pytest.raises(ValueError):
+            RDF.Compact(None, "x")
+
+
+class TestRDFIndex:
+    def test_indexes_named_nodes(self, rdf_graph):
+        assert len(RDF.Index(rdf_graph)["nodes"]) == 9
+
+    def test_shared_label_keeps_both_ids(self, rdf_graph):
+        # Two rooms are both called 'Camera'; collapsing them would drop one from every answer
+        assert len(RDF.Index(rdf_graph)["labelIndex"]["Camera"]) == 2
+
+    def test_label_maps_to_iri(self, rdf_graph):
+        assert RDF.Index(rdf_graph)["labelIndex"]["Appartamento"] == [RDF_BASE_IRI + "zone-01"]
+
+    def test_counts_predicates(self, rdf_graph):
+        predicates = RDF.Index(rdf_graph)["predicates"]
+        # 1 building + 1 storey + 3 spaces x2 + 1 zone x2
+        assert predicates["brick:hasLocation"] == 10
+        assert predicates["btwin:hasDocument"] == 1
+
+    def test_none_graph_raises(self):
+        with pytest.raises(ValueError):
+            RDF.Index(None)
+
+
+class TestRDFSchemaSummary:
+    def test_lists_only_used_prefixes(self, rdf_schema):
+        # rdflib binds ~30 namespaces to every graph; dead ones invite the model to use them
+        assert set(rdf_schema["prefixes"]) <= {"bot", "brick", "btwin", "ifc", "rdf", "rdfs"}
+
+    def test_relative_prefix_resolved_against_base(self, rdf_schema):
+        assert rdf_schema["prefixes"]["btwin"] == RDF_BASE_IRI + "btwin#"
+
+    def test_shapes_expose_the_blank_node_path(self, rdf_schema):
+        assert ("ifc:IfcPropertySet -ifc:HasProperties-> [blank node] ifc:IfcPropertySingleValue"
+                in rdf_schema["text"])
+
+    def test_entities_carry_full_iris(self, rdf_schema):
+        assert f"<{RDF_BASE_IRI}zone-01>" in rdf_schema["text"]
+
+    def test_terms_cover_classes_and_predicates(self, rdf_schema):
+        assert {"bot:Space", "brick:Zone", "brick:hasLocation"} <= rdf_schema["terms"]
+
+    def test_accepts_a_prebuilt_index(self, rdf_graph):
+        index = RDF.Index(rdf_graph)
+        assert RDF.SchemaSummary(rdf_graph, index)["text"] == RDF.SchemaSummary(rdf_graph)["text"]
+
+    def test_none_graph_raises(self):
+        with pytest.raises(ValueError):
+            RDF.SchemaSummary(None)
+
+
+class TestRDFQuery:
+    def test_select_returns_rows(self, rdf_graph):
+        assert len(RDF.Query(rdf_graph, Q_SPACES)) == 3
+
+    def test_ask_returns_single_boolean_row(self, rdf_graph):
+        assert RDF.Query(rdf_graph, Q_ASK) == [{"result": "true"}]
+
+    def test_reaches_values_behind_blank_nodes(self, rdf_graph):
+        rows = RDF.Query(rdf_graph, Q_INDEX)
+        assert rows == [{"label": "EPgl,nren", "value": "66.98", "unit": "kWh/m2 anno"}]
+
+    def test_empty_result_is_not_an_error(self, rdf_graph):
+        assert RDF.Query(rdf_graph, Q_WRONG) == []
+
+    def test_invalid_sparql_raises(self, rdf_graph):
+        with pytest.raises(ValueError):
+            RDF.Query(rdf_graph, "SELECT ?s WHERE {")
+
+    def test_missing_inputs_raise(self, rdf_graph):
+        with pytest.raises(ValueError):
+            RDF.Query(rdf_graph, "")
+        with pytest.raises(ValueError):
+            RDF.Query(None, Q_SPACES)
+
+
+class TestRDFSourceNodes:
+    def test_collects_iris(self, rdf_graph):
+        rows = RDF.Query(rdf_graph, Q_SPACES)
+        assert len(RDF.SourceNodes(rdf_graph, rows)) == 3
+
+    def test_literals_are_not_nodes(self, rdf_graph):
+        # 'Camera' is a value carried by a node, not a node
+        rows = RDF.Query(rdf_graph, Q_SPACES)
+        assert all(s.startswith("http") for s in RDF.SourceNodes(rdf_graph, rows))
+
+    def test_no_rows_gives_no_sources(self, rdf_graph):
+        assert RDF.SourceNodes(rdf_graph, []) == []
+
+    def test_none_graph_raises(self):
+        with pytest.raises(ValueError):
+            RDF.SourceNodes(None, [])
+
+
+class TestSPARQLForm:
+    def test_select(self):
+        assert SPARQL.Form(Q_SPACES) == "SELECT"
+
+    def test_ask(self):
+        assert SPARQL.Form(Q_ASK) == "ASK"
+
+    def test_not_a_query(self):
+        assert SPARQL.Form("hello there") == ""
+
+    def test_empty(self):
+        assert SPARQL.Form("") == ""
+
+
+class TestSPARQLValidate:
+    def test_accepts_a_good_select(self, rdf_schema):
+        checked, error = SPARQL.Validate(Q_SPACES, rdf_schema["terms"])
+        assert checked is not None and error == ""
+
+    def test_appends_a_missing_limit(self, rdf_schema):
+        assert "LIMIT 100" in SPARQL.Validate(Q_SPACES, rdf_schema["terms"])[0]
+
+    def test_respects_a_custom_limit(self, rdf_schema):
+        assert "LIMIT 5" in SPARQL.Validate(Q_SPACES, rdf_schema["terms"], rowLimit=5)[0]
+
+    def test_never_limits_an_ask(self, rdf_schema):
+        # LIMIT on an ASK is a syntax error
+        assert "LIMIT" not in SPARQL.Validate(Q_ASK, rdf_schema["terms"])[0].upper()
+
+    @pytest.mark.parametrize("name,query", [
+        ("drop", RDF_PREFIXES + "DROP GRAPH <https://example.org/test/>"),
+        ("service", RDF_PREFIXES + "SELECT ?s WHERE { SERVICE <http://evil.example/> { ?s ?p ?o } }"),
+        ("insert", RDF_PREFIXES + 'INSERT DATA { <https://example.org/test/site-01> rdfs:label "x" }'),
+        ("delete", RDF_PREFIXES + "DELETE WHERE { ?s ?p ?o }"),
+        ("syntax", RDF_PREFIXES + "SELECT ?s WHERE { ?s brick:hasLocation"),
+        ("empty", "   "),
+        ("prose", "Sure! Here is the query you asked for."),
+    ])
+    def test_rejects(self, rdf_schema, name, query):
+        checked, error = SPARQL.Validate(query, rdf_schema["terms"])
+        assert checked is None and error
+
+    def test_rejects_vocabulary_not_in_the_schema(self, rdf_schema):
+        # A hallucinated predicate parses perfectly and returns zero rows, which reads like
+        # an honest empty answer - this is the pass that catches it
+        checked, error = SPARQL.Validate(
+            RDF_PREFIXES + "SELECT ?s WHERE { ?s brick:hasSpace ?o }", rdf_schema["terms"])
+        assert checked is None and "brick:hasSpace" in error
+
+    def test_allows_utility_prefixes(self, rdf_schema):
+        query = (RDF_PREFIXES + "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"
+                 "SELECT ?s WHERE { ?s a bot:Space . FILTER(?s != xsd:string) }")
+        assert SPARQL.Validate(query, rdf_schema["terms"])[0] is not None
+
+    def test_skips_vocabulary_check_without_terms(self):
+        query = RDF_PREFIXES + "SELECT ?s WHERE { ?s brick:hasSpace ?o }"
+        assert SPARQL.Validate(query)[0] is not None
+
+    def test_keyword_inside_a_comment_is_inert(self, rdf_schema):
+        query = RDF_PREFIXES + "SELECT ?s WHERE { ?s a bot:Site } # DROP GRAPH <x>\nLIMIT 10"
+        assert SPARQL.Validate(query, rdf_schema["terms"])[0] is not None
+
+    def test_keyword_inside_a_literal_is_inert(self, rdf_schema):
+        query = RDF_PREFIXES + 'SELECT ?s WHERE { ?s rdfs:label "DROP TABLE" } LIMIT 10'
+        assert SPARQL.Validate(query, rdf_schema["terms"])[0] is not None
+
+    def test_hash_in_a_namespace_iri_is_not_a_comment(self, rdf_schema):
+        # Stripping comments before IRIs would eat the closing '>' of every PREFIX line
+        assert SPARQL.Validate(Q_ASK, rdf_schema["terms"])[0] is not None

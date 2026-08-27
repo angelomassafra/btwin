@@ -73,7 +73,7 @@ SpatialElement.SetLocationRelationship(building, linkedObject=site)
 
 all_objects = [site, building] + objects
 
-jsonld = Serialization.JSONLODByObjects(all_objects, savePath="building_with_equipment.json")
+jsonld = Serialization.JSONLDByObjects(all_objects, savePath="building_with_equipment.json")
 print(f"Exported {len(jsonld['@graph'])} nodes")
 ```
 

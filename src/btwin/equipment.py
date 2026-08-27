@@ -5,7 +5,7 @@ EQUIPMENT MODULE
 This module defines the Equipment class, which provides the base representation
 for creating and modeling equipment objects in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 # Dependencies

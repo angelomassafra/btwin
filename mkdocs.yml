@@ -93,5 +93,6 @@ nav:
       - Scenario: api-reference/scenario.md
       - Document: api-reference/document.md
       - Graph: api-reference/graph.md
+      - LLM, Tool & Cycle: api-reference/llm.md
       - Plot: api-reference/plot.md
       - Serialization: api-reference/serialization.md

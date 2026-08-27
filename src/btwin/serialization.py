@@ -5,7 +5,7 @@ SERIALIZATION MODULE
 This module defines the Serialization operations which provides the representation
 of graph data structures (knowledge graphs and labeled property graphs) in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 from __future__ import annotations
@@ -120,7 +120,7 @@ class Serialization():
             # Project-local examples
             "btwin:hasDocument": iri("btwin:hasDocument"),
             "btwin:isDocumentOf": iri("btwin:isDocumentOf"),
-            "btwin:isAdjacentTo": iri("btwin:isAsjacentTo"),
+            "btwin:isAdjacentTo": iri("btwin:isAdjacentTo"),
             "btwin:hasPassageTo": iri("btwin:hasPassageTo"),
             # Eko
             "eko:hasAssociatedObject": iri("eko:hasAssociatedObject"),
@@ -133,7 +133,7 @@ class Serialization():
         return {"prefixes": prefixes, "classes": classes, "properties": relationshipNames}
 
     @staticmethod
-    def JSONLODByObjects(
+    def JSONLDByObjects(
         objects: Optional[Iterable[Any]] = None,
         savePath: Optional[str | Path] = None,
         *,

@@ -41,3 +41,6 @@ site/
 
 # Claude Code
 .claude/
+
+# Local working project: real building documents, not part of the package
+myproject/

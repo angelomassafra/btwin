@@ -2,24 +2,26 @@
 BTWIN - A toolkit for graph-based decision support system prototypes in building management.
 """
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 __author__ = "Angelo Massafra"
 
-from btwin.document import Document
-from btwin.equipment import Equipment, Inventory
-from btwin.graph import RDF, NetworkX
-from btwin.kpi_set import KPI, KPISet
-from btwin.plot import Color, GraphPlot
-from btwin.point import Observation, Point
-from btwin.property_set import Property, PropertySet
-from btwin.scenario import Scenario
-from btwin.schema import Schema
-from btwin.serialization import Serialization
-from btwin.spatial_element import SpatialElement
+from .document import Document
+from .equipment import Equipment, Inventory
+from .graph import RDF, SPARQL, NetworkX
+from .kpi_set import KPI, KPISet
+from .llm import LLM, CostMeter, Cycle, Tool
+from .plot import Color, GraphPlot
+from .point import Observation, Point
+from .property_set import Property, PropertySet
+from .scenario import Scenario
+from .schema import Schema
+from .serialization import Serialization
+from .spatial_element import SpatialElement, SpatialHierarchy
 
 __all__ = [
     "Schema",
     "SpatialElement",
+    "SpatialHierarchy",
     "Equipment",
     "Inventory",
     "Point",
@@ -33,6 +35,11 @@ __all__ = [
     "Serialization",
     "NetworkX",
     "RDF",
+    "SPARQL",
+    "LLM",
+    "Tool",
+    "Cycle",
+    "CostMeter",
     "GraphPlot",
     "Color",
 ]

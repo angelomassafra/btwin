@@ -5,7 +5,7 @@ KPI MODULE
 This module defines the KPI class, which provides the base representation
 for attributing key performance indicators to the digital objects in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 from copy import deepcopy

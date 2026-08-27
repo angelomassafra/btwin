@@ -28,13 +28,13 @@ class TestIRIs:
             assert isinstance(v, str)
 
 
-class TestJSONLODByObjects:
+class TestJSONLDByObjects:
     def test_round_trip(self, tmp_path, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(
             spatialElementObject=building_obj,
             linkedObject=site_obj,
         )
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -44,7 +44,7 @@ class TestJSONLODByObjects:
 
     def test_saves_to_file(self, tmp_path, site_obj):
         out = tmp_path / "test.json"
-        Serialization.JSONLODByObjects(
+        Serialization.JSONLDByObjects(
             objects=[site_obj],
             savePath=str(out),
             strictValidation=False,
@@ -54,7 +54,7 @@ class TestJSONLODByObjects:
         assert "@graph" in data
 
     def test_validates_json_structure(self, site_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj],
             strictValidation=False,
         )
@@ -63,11 +63,11 @@ class TestJSONLODByObjects:
         assert graph[0]["@id"] == "site-01"
 
     def test_empty_objects(self):
-        jsonld = Serialization.JSONLODByObjects(objects=[], strictValidation=False)
+        jsonld = Serialization.JSONLDByObjects(objects=[], strictValidation=False)
         assert jsonld["@graph"] == []
 
     def test_nested_objects_flattened(self, site_obj, building_obj):
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[[site_obj], [building_obj]],
             strictValidation=False,
         )
@@ -76,7 +76,7 @@ class TestJSONLODByObjects:
     def test_strict_unknown_class_raises(self):
         obj = {"@id": "x", "@type": "unknown:Type", "relationships": {}}
         with pytest.raises(ValueError, match="Unknown namespace"):
-            Serialization.JSONLODByObjects(objects=[obj], strictValidation=True)
+            Serialization.JSONLDByObjects(objects=[obj], strictValidation=True)
 
     def test_strict_unknown_property_raises(self, site_obj):
         SpatialElement.SetRelationship(
@@ -87,20 +87,20 @@ class TestJSONLODByObjects:
             validate=False,
         )
         with pytest.raises(ValueError, match="Unknown namespace"):
-            Serialization.JSONLODByObjects(objects=[site_obj], strictValidation=True)
+            Serialization.JSONLDByObjects(objects=[site_obj], strictValidation=True)
 
     def test_non_dict_node_raises(self):
         with pytest.raises(TypeError):
-            Serialization.JSONLODByObjects(objects=["not_dict"], strictValidation=False)
+            Serialization.JSONLDByObjects(objects=["not_dict"], strictValidation=False)
 
     def test_non_dict_relationships_raises(self):
         obj = {"@id": "x", "@type": "bot:Site", "relationships": "bad"}
         with pytest.raises(TypeError):
-            Serialization.JSONLODByObjects(objects=[obj], strictValidation=False)
+            Serialization.JSONLDByObjects(objects=[obj], strictValidation=False)
 
     def test_save_auto_append_extension(self, tmp_path, site_obj):
         out = tmp_path / "test"
-        Serialization.JSONLODByObjects(
+        Serialization.JSONLDByObjects(
             objects=[site_obj],
             savePath=str(out),
             strictValidation=False,
@@ -109,7 +109,7 @@ class TestJSONLODByObjects:
 
     def test_context_contains_used_prefixes(self, site_obj, building_obj):
         SpatialElement.SetLocationRelationship(building_obj, linkedObject=site_obj)
-        jsonld = Serialization.JSONLODByObjects(
+        jsonld = Serialization.JSONLDByObjects(
             objects=[site_obj, building_obj],
             strictValidation=False,
         )
@@ -120,10 +120,10 @@ class TestJSONLODByObjects:
     def test_non_string_relationship_name_raises(self):
         obj = {"@id": "x", "@type": "bot:Site", "relationships": {123: []}}
         with pytest.raises(TypeError):
-            Serialization.JSONLODByObjects(objects=[obj], strictValidation=False)
+            Serialization.JSONLDByObjects(objects=[obj], strictValidation=False)
 
     def test_none_relationships_skipped(self):
         obj = {"@id": "x", "@type": "bot:Site", "relationships": None}
         # Should not raise
-        jsonld = Serialization.JSONLODByObjects(objects=[obj], strictValidation=False)
+        jsonld = Serialization.JSONLDByObjects(objects=[obj], strictValidation=False)
         assert len(jsonld["@graph"]) == 1

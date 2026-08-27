@@ -5,7 +5,7 @@ PROPERTY MODULE
 This module defines the Property class, which provides the base representation
 for attributing properties to the digital objects in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 class PropertySet:

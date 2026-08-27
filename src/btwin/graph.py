@@ -5,16 +5,17 @@ GRAPH MODULE
 This module defines the Graph class, which provides the base representation
 for graphs (LPGs and KGs) in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 # Dependencies
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Union
 
 # BTWIN modules
-from btwin.schema import Schema
+from .schema import Schema
 
 
 # Functions
@@ -1771,6 +1772,232 @@ class NetworkX():
         return jsonData
 
     @staticmethod
+    def ToRDF(
+        nxGraph=None,
+        savePath: Optional[Union[str, Path]] = None,
+        *,
+        context: Optional[Dict[str, str]] = None,
+        strict: bool = True,
+        includeLiterals: bool = True,
+        baseIRI: Optional[str] = None,
+        expandPSets: bool = True,
+        nodeTypeAttr: str = "type",
+        edgeTypeAttr: str = "type"
+    ):
+        """
+        Build an RDFLib Graph from a NetworkX graph and (optionally) save it as Turtle.
+
+        Description:
+            Rebuilds a BTWIN JSON-LD document from the labeled property graph (nodes become
+            '@graph' entries, edges become 'relationships' entries) and delegates the triple
+            generation to `RDF.ByJSONLD`. It is therefore the graph-side counterpart of
+            `NetworkX.ByJSONLD`: `RDF.ByJSONLD(jsonld)` and `NetworkX.ToRDF(NetworkX.ByJSONLD(jsonld))`
+            yield the same triples, as long as the JSON-LD round-trips through the graph
+            (see `expandPSets` for property sets, which are flattened at import time).
+
+        Args:
+            nxGraph: A NetworkX graph instance (Graph, DiGraph, MultiGraph, MultiDiGraph).
+            savePath (str | Path, optional): File path to serialize the graph (Turtle). If omitted,
+                the graph is not written to disk.
+            context (dict, optional): Prefix to namespace IRI map used as '@context'. Defaults to
+                the prefixes declared in `Serialization.IRIs()`; when supplied, entries are merged
+                on top of the defaults, so only overrides/additions need to be listed.
+            strict (bool, optional): When True (default), raise on malformed data (nodes without
+                a usable '@id', edges without a predicate, CURIE prefixes missing from the context).
+                When False, skip faulty entries, printing a warning.
+            includeLiterals (bool, optional): Pass-through to `RDF.ByJSONLD`. When True (default),
+                node attributes are emitted as literals ('name' as `rdfs:label`, CURIE-keyed
+                scalars as their predicate); when False, only `rdf:type` and relationship
+                triples are produced.
+            baseIRI (str, optional): Namespace used to mint absolute IRIs for node identifiers
+                that are not already absolute. See `RDF.ByJSONLD`.
+            expandPSets (bool, optional): When True (default), the flattened key/value attributes
+                of `ifc:IfcPropertySet` nodes are rebuilt into an 'ifc:HasProperties' list, so the
+                properties compacted by `NetworkX.AddNodeByObject` are emitted as triples again.
+                A '<propertyName>_unit' attribute, when present, becomes the property unit.
+            nodeTypeAttr (str, optional): Node attribute holding the semantic type. Default "type".
+            edgeTypeAttr (str, optional): Edge attribute holding the predicate. Default "type".
+
+        Returns:
+            tuple: (rdfGraph, turtleText)
+                - rdfGraph: rdflib.Graph containing the generated triples
+                - turtleText: serialized Turtle string of the graph (also written to disk if savePath)
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+            TypeError:   If `nxGraph` is not a NetworkX graph instance, or `context` is not a dict.
+            ValueError:  If inputs are malformed and `strict=True`.
+            OSError:     If writing to `savePath` fails.
+        """
+        # --- BTWIN modules (local import keeps the module import graph acyclic) ---
+        from .serialization import Serialization
+
+        # --- Validate graph ---------------------------------------------------
+        if nxGraph is None or not hasattr(nxGraph, "nodes") or not hasattr(nxGraph, "edges"):
+            raise TypeError("nxGraph must be a valid NetworkX graph instance.")
+
+        # --- Helpers -----------------------------------------------------------
+        def report(message: str) -> None:
+            """Raise or warn, depending on `strict`."""
+            if strict:
+                raise ValueError(message)
+            print("Warning:", message)
+
+        def curie_prefix(curie: Any) -> Optional[str]:
+            """Return the prefix of a 'prefix:Local' CURIE, or None when not a CURIE."""
+            if not isinstance(curie, str) or ":" not in curie:
+                return None
+            pref = curie.split(":", 1)[0]
+            return pref or None
+
+        def is_pset(t: Any) -> bool:
+            """Match the IFC property set type, in both CURIE and underscore notation."""
+            return isinstance(t, str) and t.lower().replace("_", ":") == "ifc:ifcpropertyset"
+
+        def pset_properties(attrs: Dict[str, Any]) -> List[Dict[str, Any]]:
+            """Rebuild 'ifc:HasProperties' from the flattened attributes of a PSet node."""
+            reserved = {"@id", "@type", "id", nodeTypeAttr, "name",
+                        "relationships", "ifc:HasProperties", "hasProperties"}
+            properties: List[Dict[str, Any]] = []
+            for key, value in attrs.items():
+                if not isinstance(key, str) or key in reserved:
+                    continue
+                if key.endswith("_unit") and key[:-5] in attrs:
+                    continue  # companion of another property, consumed below
+                unit = attrs.get(key + "_unit")
+                enumerated = isinstance(value, list)
+                entries = [{"value": v} for v in value] if enumerated else [{"value": value}]
+                if unit is not None:
+                    for entry in entries:
+                        entry["unit"] = unit
+                prop: Dict[str, Any] = {"name": key}
+                if enumerated:
+                    prop["enumeratedValues"] = entries
+                else:
+                    prop["nominalValue"] = entries[0]
+                properties.append(prop)
+            return properties
+
+        # --- First pass: rebuild '@graph' entries from nodes -------------------
+        graphNodes: List[Dict[str, Any]] = []
+        nodeIndex: Dict[Any, Dict[str, Any]] = {}   # node key -> JSON-LD object
+        nodeTypes: Dict[Any, Any] = {}              # node key -> semantic type
+
+        for nodeId, nodeAttrs in nxGraph.nodes(data=True):
+            attrs = nodeAttrs if isinstance(nodeAttrs, dict) else {}
+
+            # Identity: the stored 'id' wins, the graph key is the fallback
+            uid = attrs.get("id")
+            if not isinstance(uid, str) or not uid.strip():
+                uid = str(nodeId) if nodeId is not None else ""
+            if not uid.strip():
+                report("Node without a usable identifier; skipped.")
+                continue
+
+            nodeType = attrs.get(nodeTypeAttr)
+            obj: Dict[str, Any] = {"@id": uid}
+            if isinstance(nodeType, str) and nodeType.strip():
+                obj["@type"] = nodeType
+
+            nodeName = attrs.get("name")
+            if isinstance(nodeName, (str, int, float, bool)) and str(nodeName).strip():
+                obj["name"] = nodeName
+
+            # Remaining attributes: CURIE-keyed ones become literals downstream,
+            # bare keys are carried along and ignored by `RDF.ByJSONLD`
+            for key, value in attrs.items():
+                if key in {"@id", "@type", "id", nodeTypeAttr, "name", "relationships"}:
+                    continue
+                obj[key] = value
+
+            # Property sets: restore the structure flattened at import time
+            if expandPSets and is_pset(nodeType) and not isinstance(obj.get("ifc:HasProperties"), list):
+                properties = pset_properties(attrs)
+                if properties:
+                    obj["ifc:HasProperties"] = properties
+
+            obj["relationships"] = {}
+            graphNodes.append(obj)
+            nodeIndex[nodeId] = obj
+            nodeTypes[nodeId] = nodeType
+
+        # --- Second pass: rebuild 'relationships' from edges --------------------
+        for source, target, edgeAttrs in nxGraph.edges(data=True):
+            data = edgeAttrs if isinstance(edgeAttrs, dict) else {}
+
+            predicate = data.get(edgeTypeAttr)
+            if not isinstance(predicate, str) or not predicate.strip():
+                report("Edge '" + str(source) + "' to '" + str(target)
+                       + "' has no '" + edgeTypeAttr + "' predicate; skipped.")
+                continue
+
+            subject = nodeIndex.get(source)
+            if subject is None:
+                report("Predicate '" + predicate + "' has an unknown source node '" + str(source) + "'; skipped.")
+                continue
+            targetObj = nodeIndex.get(target)
+            if targetObj is None:
+                report("Predicate '" + predicate + "' has an unknown target node '" + str(target) + "'; skipped.")
+                continue
+
+            # Target type: the edge carries it, the target node is the fallback
+            targetType = data.get("objectType")
+            if not isinstance(targetType, str) or not targetType.strip():
+                targetType = nodeTypes.get(target)
+
+            entry: Dict[str, Any] = {"@id": targetObj["@id"]}
+            if isinstance(targetType, str) and targetType.strip():
+                entry["@type"] = targetType
+
+            # Parallel edges sharing a predicate collapse into a single triple
+            targets = subject["relationships"].setdefault(predicate, [])
+            if not any(t.get("@id") == entry["@id"] for t in targets):
+                targets.append(entry)
+
+        # --- Build '@context' from the CURIE prefixes actually used --------------
+        prefixes: Dict[str, str] = dict(Serialization.IRIs()["prefixes"])
+        if context is not None:
+            if not isinstance(context, dict):
+                raise TypeError("context must be a dict mapping prefix to namespace IRI.")
+            prefixes.update(context)
+
+        usedPrefixes: Set[str] = set()
+        for obj in graphNodes:
+            candidates = [obj.get("@type")] + list(obj["relationships"].keys())
+            for targets in obj["relationships"].values():
+                candidates.extend(entry.get("@type") for entry in targets)
+            if includeLiterals:
+                candidates.extend(
+                    key for key, value in obj.items()
+                    if key not in {"@id", "@type", "name", "relationships"}
+                    and isinstance(value, (str, int, float, bool))
+                )
+            if isinstance(obj.get("ifc:HasProperties"), list):
+                candidates.append("ifc:HasProperties")
+            for curie in candidates:
+                pref = curie_prefix(curie)
+                if pref:
+                    usedPrefixes.add(pref)
+
+        unknownPrefixes = sorted(p for p in usedPrefixes if p not in prefixes)
+        if unknownPrefixes:
+            report("Namespace prefix(es) missing from the context: " + ", ".join(unknownPrefixes))
+
+        jsonld: Dict[str, Any] = {
+            "@context": {p: iri for p, iri in prefixes.items() if p in usedPrefixes},
+            "@graph": graphNodes,
+        }
+
+        # --- Delegate triple generation and serialization ------------------------
+        return RDF.ByJSONLD(
+            jsonld,
+            savePath,
+            strict=strict,
+            includeLiterals=includeLiterals,
+            baseIRI=baseIRI,
+        )
+
+    @staticmethod
     def Validate(
         nxGraph,
         *,
@@ -1961,7 +2188,9 @@ class RDF():
         jsonld: Optional[Dict[str, Any]] = None,
         savePath: Optional[str | Path] = None,
         *,
-        strict: bool = True
+        strict: bool = True,
+        includeLiterals: bool = True,
+        baseIRI: Optional[str] = None
     ):
         """
         Build an RDFLib Graph from a JSON-LD-like BTWIN structure and (optionally) save it.
@@ -1973,6 +2202,17 @@ class RDF():
             strict (bool, optional): When True (default), raise on any malformed/missing
                 data (e.g., invalid CURIE, unknown prefix). When False, skip faulty
                 entries, printing a warning.
+            includeLiterals (bool, optional): When True (default), also emit non-relationship
+                data as literals: 'name' becomes `rdfs:label`, any other scalar under a known
+                CURIE key becomes that predicate, and 'ifc:HasProperties' entries become blank
+                nodes carrying `rdfs:label`, `ifc:NominalValue` and `ifc:Unit`. When False,
+                only `rdf:type` and relationship triples are produced.
+            baseIRI (str, optional): Namespace used to mint absolute IRIs for '@id' values
+                that are not already absolute (e.g. 'FRV9' with baseIRI 'https://example.org/frv9#'
+                becomes 'https://example.org/frv9#FRV9'). When omitted, bare '@id' values are
+                emitted as relative IRIs, which every consumer resolves against its own base —
+                so the same file read from two locations denotes two different graphs. Supply
+                a base whenever the Turtle output has to be portable.
 
         Returns:
             tuple: (rdfGraph, turtleText)
@@ -1986,9 +2226,9 @@ class RDF():
         """
         # --- Import locally to give clear error messages -----------------------
         try:
+            from rdflib import BNode, Literal, Namespace, URIRef
             from rdflib import Graph as RDFGraph
-            from rdflib import Namespace, URIRef
-            from rdflib.namespace import RDF
+            from rdflib.namespace import RDF, RDFS
         except Exception as exc:
             raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
 
@@ -2006,6 +2246,13 @@ class RDF():
                 if strict: raise ValueError(msg)
                 print("Warning:", msg); return False
             return True
+
+        def entity_uri(identifier: str):
+            """Mint an absolute IRI for an '@id', using baseIRI when one is supplied."""
+            if baseIRI and "://" not in identifier:
+                separator = "" if baseIRI.endswith(("#", "/", ":")) else "#"
+                return URIRef(f"{baseIRI}{separator}{identifier}")
+            return URIRef(identifier)
 
         def split_curie(curie: str) -> Tuple[str, str]:
             """Split 'prefix:Local' into (prefix, Local) with validation."""
@@ -2054,7 +2301,7 @@ class RDF():
                 msg = "Node missing a non-empty '@id'."
                 if strict: raise ValueError(msg)
                 print("Warning:", msg); continue
-            subj = URIRef(subjId)
+            subj = entity_uri(subjId)
 
             # @type may be string or list
             typesVal = obj.get("@type", [])
@@ -2075,6 +2322,65 @@ class RDF():
                     print("Warning:", msg); continue
                 rdfGraph.add((subj, RDF.type, namespaces[pref][local]))
 
+            # --- Literals (names, scalar attributes, property sets) -----------
+            if not includeLiterals:
+                continue
+
+            rdfGraph.bind("rdfs", RDFS)
+
+            # 'name' has no CURIE in the context: emit it as the standard label
+            nodeName = obj.get("name")
+            if isinstance(nodeName, (str, int, float, bool)) and str(nodeName).strip():
+                rdfGraph.add((subj, RDFS.label, Literal(nodeName)))
+
+            for key, value in obj.items():
+                # Handled elsewhere: identity, types, edges, label, and PSet contents
+                if key in {"@id", "@type", "name", "relationships", "ifc:HasProperties"}:
+                    continue
+
+                # Scalar attributes are emitted when their key is a usable CURIE
+                if not isinstance(value, (str, int, float, bool)):
+                    continue
+                try:
+                    pfx, local = split_curie(key)
+                except ValueError:
+                    continue  # bare keys have no predicate IRI; skip rather than invent one
+                if pfx not in namespaces:
+                    continue
+                rdfGraph.add((subj, namespaces[pfx][local], Literal(value)))
+
+            # IFC property sets: one blank node per property, carrying value and unit
+            properties = obj.get("ifc:HasProperties")
+            if isinstance(properties, list) and "ifc" in namespaces:
+                ifcNs = namespaces["ifc"]
+                for prop in properties:
+                    if not isinstance(prop, dict):
+                        continue
+                    propName = prop.get("name")
+                    if not isinstance(propName, str) or not propName.strip():
+                        continue
+
+                    propNode = BNode()
+                    rdfGraph.add((subj, ifcNs["HasProperties"], propNode))
+                    rdfGraph.add((propNode, RDFS.label, Literal(propName)))
+
+                    propType = prop.get("@type")
+                    if isinstance(propType, str) and propType.strip():
+                        rdfGraph.add((propNode, RDF.type, ifcNs[propType]))
+
+                    # Single value, or each entry of an enumerated value
+                    values = prop.get("enumeratedValues")
+                    if not isinstance(values, list):
+                        nominal = prop.get("nominalValue")
+                        values = [nominal] if isinstance(nominal, dict) else []
+                    for entry in values:
+                        if not isinstance(entry, dict):
+                            continue
+                        if entry.get("value") is not None:
+                            rdfGraph.add((propNode, ifcNs["NominalValue"], Literal(entry["value"])))
+                        if entry.get("unit") is not None:
+                            rdfGraph.add((propNode, ifcNs["Unit"], Literal(entry["unit"])))
+
         # --- Add relationships (edges) ----------------------------------------
         for obj in graphNodes:
             if obj is None or not isinstance(obj, dict):
@@ -2083,7 +2389,7 @@ class RDF():
             if not isinstance(subjId, str) or not subjId.strip():
                 # already warned/raised above; skip here
                 continue
-            subj = URIRef(subjId)
+            subj = entity_uri(subjId)
 
             rels = obj.get("relationships")
             if rels is None:
@@ -2127,7 +2433,7 @@ class RDF():
                         if strict: raise ValueError(msg)
                         print("Warning:", msg); continue
 
-                    rdfGraph.add((subj, namespaces[pfx][local], URIRef(tgtId)))
+                    rdfGraph.add((subj, namespaces[pfx][local], entity_uri(tgtId)))
 
         # --- Serialize (Turtle) and optionally save ----------------------------
         try:
@@ -2146,3 +2452,496 @@ class RDF():
 
         return rdfGraph, turtleText
 
+    @staticmethod
+    def ByTTL(
+        ttlPath: Optional[Union[str, Path]] = None,
+        *,
+        baseIRI: Optional[str] = None
+    ):
+        """
+        Load an RDFLib Graph from a Turtle file.
+
+        Args:
+            ttlPath (str | Path, optional): Path to the .ttl file to read.
+            baseIRI (str, optional): Base used to resolve relative IRIs in the file.
+                Turtle written without a base contains relative IRIs, which rdflib
+                otherwise resolves against the file's own location — so the same file
+                read from two directories yields two different graphs. Pass the base
+                the file was written with to get stable identifiers.
+
+        Returns:
+            rdflib.Graph: The parsed graph.
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+            ValueError:  If `ttlPath` is not provided.
+            OSError:     If the file does not exist or cannot be parsed.
+        """
+        try:
+            from rdflib import Graph as RDFGraph
+        except Exception as exc:
+            raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
+
+        if not ttlPath:
+            raise ValueError("ttlPath must be provided.")
+        path = Path(ttlPath)
+        if not path.exists():
+            raise OSError(f"Turtle file not found: {path}")
+
+        rdfGraph = RDFGraph()
+        try:
+            # publicID fixes the base for relative IRIs; without it rdflib uses the file URL
+            rdfGraph.parse(str(path), format="turtle", publicID=baseIRI) if baseIRI else \
+                rdfGraph.parse(str(path), format="turtle")
+        except Exception as exc:
+            raise OSError(f"Failed to parse Turtle file '{path}'.") from exc
+
+        return rdfGraph
+
+    @staticmethod
+    def Compact(rdfGraph=None, term: Any = None) -> str:
+        """
+        Shorten an IRI to 'prefix:Local' when a binding exists, else return it unchanged.
+
+        Args:
+            rdfGraph: An rdflib.Graph whose namespace bindings are used.
+            term: The IRI or term to shorten.
+
+        Returns:
+            str: The shortest available compact form.
+
+        Raises:
+            ValueError: If `rdfGraph` is None.
+        """
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+
+        text = str(term)
+        best = text
+        for prefix, namespace in rdfGraph.namespaces():
+            ns = str(namespace)
+            if text.startswith(ns) and len(text) > len(ns):
+                candidate = f"{prefix}:{text[len(ns):]}"
+                if len(candidate) < len(best):
+                    best = candidate
+        return best
+
+    @staticmethod
+    def Query(rdfGraph=None, sparql: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Run a SPARQL SELECT or ASK query and return its rows as plain dictionaries.
+
+        Args:
+            rdfGraph: An rdflib.Graph instance to query.
+            sparql: The SPARQL query text.
+
+        Returns:
+            list[dict]: One dict per result row, mapping variable name to its value as a
+                string. An ASK query returns a single row {'result': 'true'|'false'}.
+
+        Raises:
+            ValueError: If inputs are missing, or the query text is not valid SPARQL.
+        """
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+        if not sparql or not isinstance(sparql, str) or not sparql.strip():
+            raise ValueError("sparql must be a non-empty string.")
+
+        try:
+            result = rdfGraph.query(sparql)
+        except Exception as exc:
+            raise ValueError(f"Invalid SPARQL query: {exc}") from exc
+
+        # ASK carries a single boolean rather than bindings
+        if getattr(result, "type", None) == "ASK":
+            return [{"result": str(bool(result.askAnswer)).lower()}]
+
+        rows: List[Dict[str, Any]] = []
+        variables = [str(v) for v in (result.vars or [])]
+        for row in result:
+            rows.append({name: (None if row[name] is None else str(row[name])) for name in variables})
+        return rows
+
+    @staticmethod
+    def Index(rdfGraph=None) -> Dict[str, Any]:
+        """
+        Index every named node by ID, label and type, plus the predicates in use.
+
+        Identifiers in a graph built from IFC are opaque GUIDs ('3kSL0VGKv3gxJCujeqtuJj'),
+        so a label to ID index is the only thing that lets a model bind a word in a question
+        to a node in the data.
+
+        Args:
+            rdfGraph: An rdflib.Graph instance to inspect.
+
+        Returns:
+            dict: {
+                'nodes': list[dict],            # {'id', 'label', 'type'} per named subject
+                'labelIndex': dict[str, list],  # label -> every ID carrying it
+                'predicates': dict[str, int],   # compact predicate -> occurrences
+            }
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+            ValueError:  If `rdfGraph` is None.
+        """
+        try:
+            from rdflib import URIRef
+            from rdflib.namespace import RDF as RDFNamespace
+            from rdflib.namespace import RDFS
+        except Exception as exc:
+            raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
+
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+
+        nodes: List[Dict[str, str]] = []
+        labelIndex: Dict[str, List[str]] = {}
+
+        for subject in sorted({s for s in rdfGraph.subjects() if isinstance(s, URIRef)}, key=str):
+            label = rdfGraph.value(subject, RDFS.label)
+            nodeType = rdfGraph.value(subject, RDFNamespace.type)
+            entry = {
+                "id": str(subject),
+                "label": str(label) if label is not None else "",
+                "type": RDF.Compact(rdfGraph, nodeType) if nodeType is not None else "",
+            }
+            nodes.append(entry)
+            if entry["label"]:
+                # A list, not a single value: two rooms can share the label 'Camera', and
+                # collapsing them would silently drop one from every answer.
+                labelIndex.setdefault(entry["label"], []).append(entry["id"])
+
+        predicates: Dict[str, int] = {}
+        for predicate in rdfGraph.predicates():
+            key = RDF.Compact(rdfGraph, predicate)
+            predicates[key] = predicates.get(key, 0) + 1
+
+        return {"nodes": nodes, "labelIndex": labelIndex, "predicates": predicates}
+
+    @staticmethod
+    def SchemaSummary(rdfGraph=None, index: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Describe a graph's vocabulary and shape as the text used to ground an LLM.
+
+        A flat list of predicates is not enough: values reached through blank nodes are
+        invisible in it. The SHAPES section spells those paths out, which is what makes a
+        property hanging three hops behind an entity reachable at all.
+
+        Args:
+            rdfGraph: An rdflib.Graph instance to inspect.
+            index: The output of RDF.Index. Computed here when not supplied.
+
+        Returns:
+            dict: {
+                'text': str,        # the grounding block: prefixes, classes, predicates,
+                                    # shapes, entities and notes
+                'terms': set[str],  # the CURIEs a query may legally use, for SPARQL.Validate
+                'prefixes': dict,   # prefix -> namespace, only those actually used
+            }
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+            ValueError:  If `rdfGraph` is None.
+        """
+        try:
+            from rdflib import BNode, Literal, URIRef
+            from rdflib.namespace import RDF as RDFNamespace
+        except Exception as exc:
+            raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
+
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+        if index is None:
+            index = RDF.Index(rdfGraph)
+
+        # Only the vocabulary actually present: rdflib binds ~30 namespaces to every new
+        # graph, and a prompt full of dead prefixes is an invitation to use them.
+        usedTerms = set(rdfGraph.objects(None, RDFNamespace.type)) | set(rdfGraph.predicates())
+        usedPrefixes = {
+            prefix: str(namespace)
+            for prefix, namespace in rdfGraph.namespaces()
+            if any(str(term).startswith(str(namespace)) for term in usedTerms)
+        }
+
+        classes = sorted({RDF.Compact(rdfGraph, c) for c in set(rdfGraph.objects(None, RDFNamespace.type))})
+        predicates = sorted(index["predicates"])
+
+        def classOf(term: Any) -> str:
+            """The rdf:type of a node, tagged when it is a blank node, or a literal's datatype."""
+            if isinstance(term, Literal):
+                return f"literal ({RDF.Compact(rdfGraph, term.datatype)})" if term.datatype else "literal"
+            nodeType = rdfGraph.value(term, RDFNamespace.type)
+            name = RDF.Compact(rdfGraph, nodeType) if nodeType is not None else "(untyped)"
+            return f"[blank node] {name}" if isinstance(term, BNode) else name
+
+        shapes = sorted({
+            (classOf(s), RDF.Compact(rdfGraph, p), classOf(o))
+            for s, p, o in rdfGraph
+            if p != RDFNamespace.type
+        })
+
+        lines: List[str] = ["PREFIXES"]
+        for prefix, namespace in sorted(usedPrefixes.items()):
+            lines.append(f"  PREFIX {prefix}: <{namespace}>")
+
+        lines.append("\nCLASSES (used as rdf:type)")
+        descriptions = Schema.Types()
+        for name in classes:
+            note = descriptions.get(name, {}).get("description", "")
+            lines.append(f"  {name}" + (f"  - {note}" if note else ""))
+
+        lines.append("\nPREDICATES")
+        for name in predicates:
+            lines.append(f"  {name}  ({index['predicates'][name]}x)")
+
+        lines.append("\nSHAPES (subject class -predicate-> object class)")
+        for subjectClass, predicate, objectClass in shapes:
+            lines.append(f"  {subjectClass} -{predicate}-> {objectClass}")
+
+        lines.append("\nENTITIES (label -> IRI)")
+        typeByID = {n["id"]: n["type"] for n in index["nodes"]}
+        for label in sorted(index["labelIndex"]):
+            for iri in index["labelIndex"][label]:
+                nodeType = typeByID.get(iri, "")
+                lines.append(f"  {label!r} -> <{iri}>" + (f"  a {nodeType}" if nodeType else ""))
+
+        # Entity IRIs are written out in full because they cannot all be abbreviated: an IFC
+        # GUID like '3Aw$FV5MbAufEo59pkoNgA' contains '$', which is not legal in a SPARQL
+        # prefixed local name.
+        lines.append(
+            "\nNOTES\n"
+            "  Entities have no prefix - refer to them with full IRIs in angle brackets.\n"
+            "  Property values hang off blank nodes: follow ifc:HasPropertySets then\n"
+            "  ifc:HasProperties, and read rdfs:label, ifc:NominalValue and ifc:Unit there."
+        )
+
+        # What SPARQL.Validate will accept: graph vocabulary, plus every URIRef term in use
+        terms = set(classes) | set(predicates)
+        terms |= {RDF.Compact(rdfGraph, t) for t in usedTerms if isinstance(t, URIRef)}
+
+        return {"text": "\n".join(lines), "terms": terms, "prefixes": usedPrefixes}
+
+    @staticmethod
+    def SourceNodes(rdfGraph=None, rows: Optional[List[Dict[str, Any]]] = None) -> List[str]:
+        """
+        The graph nodes an answer rests on.
+
+        Only IRIs count: a literal like 'Camera' is a value carried by a node, not a node.
+
+        Args:
+            rdfGraph: An rdflib.Graph instance the rows came from.
+            rows: The rows returned by RDF.Query.
+
+        Returns:
+            list[str]: Node IRIs, in the order they first appear in the rows.
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+            ValueError:  If `rdfGraph` is None.
+        """
+        try:
+            from rdflib import URIRef
+        except Exception as exc:
+            raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
+
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+        rows = rows or []
+
+        known = {str(s) for s in rdfGraph.subjects() if isinstance(s, URIRef)}
+        known |= {str(o) for o in rdfGraph.objects() if isinstance(o, URIRef)}
+
+        source: List[str] = []
+        for row in rows:
+            for value in row.values():
+                if value and value in known and value not in source:
+                    source.append(value)
+        return source
+
+
+# Prefixes whose local names are free-form vocabulary rather than graph content, so the
+# validator must not reject a query for using e.g. xsd:double in a FILTER.
+UTILITY_PREFIXES = {"rdf", "rdfs", "xsd", "owl", "skos", "sh", "dct", "dcterms"}
+
+# Anything that writes, deletes, or reaches out over the network. A model-authored SERVICE
+# clause would make the caller issue requests to an endpoint of the model's choosing.
+FORBIDDEN_KEYWORDS = ("INSERT", "DELETE", "DROP", "CLEAR", "LOAD", "CREATE", "SERVICE",
+                      "ADD", "MOVE", "COPY")
+
+# What a model may not issue even when it is allowed to write: these replace or empty a
+# whole graph rather than edit its content, and GRAPH, WITH and USING move the edit out of
+# the default graph, where the caller would never see it.
+FORBIDDEN_UPDATE_KEYWORDS = ("DROP", "CLEAR", "LOAD", "CREATE", "SERVICE", "ADD", "MOVE",
+                            "COPY", "GRAPH", "WITH", "USING")
+
+CURIE = re.compile(r"(?<![<\w:/#-])([A-Za-z][\w.-]*):([A-Za-z0-9_][\w.-]*)")
+
+
+def _ScanText(sparql: str) -> str:
+    """
+    Blank out IRIs and string literals, then comments, so keyword scanning sees structure only.
+
+    The order is the whole point. '#' opens a comment only outside an IRI, and namespace IRIs
+    routinely end in one ('https://w3id.org/bot#'): stripping comments first eats the closing
+    '>' and takes the rest of the query with it.
+    """
+    text = re.sub(r'"""(?:[^"\\]|\\.|"(?!""))*"""', '""', sparql)
+    text = re.sub(r"'''(?:[^'\\]|\\.|'(?!''))*'''", '""', text)
+    text = re.sub(r'<[^<>"{}|^`\\\s]*>', "<>", text)          # IRIs, before their '#' is read as a comment
+    text = re.sub(r'"(?:[^"\\\n]|\\.)*"', '""', text)
+    text = re.sub(r"'(?:[^'\\\n]|\\.)*'", '""', text)
+    return re.sub(r"#[^\n]*", " ", text)
+
+
+class SPARQL():
+
+    @staticmethod
+    def Form(sparql: Optional[str] = None) -> str:
+        """
+        Tell whether a query is a SELECT or an ASK.
+
+        Args:
+            sparql: The SPARQL query text.
+
+        Returns:
+            str: 'SELECT', 'ASK', or '' when neither is found.
+        """
+        if not sparql or not isinstance(sparql, str):
+            return ""
+        body = re.sub(r"(?is)\bPREFIX\s+[\w.-]*:\s*<>", " ", _ScanText(sparql))
+        match = re.search(r"(?is)\b(SELECT|ASK)\b", body)
+        return match.group(1).upper() if match else ""
+
+    @staticmethod
+    def Validate(
+        sparql: Optional[str] = None,
+        terms: Optional[Set[str]] = None,
+        rowLimit: int = 100,
+    ) -> Tuple[Optional[str], str]:
+        """
+        Check a query before it is allowed near a graph.
+
+        Four passes, most dangerous first: shape, safety, syntax, vocabulary. The vocabulary
+        pass is the one that earns its keep - a hallucinated predicate parses perfectly and
+        returns zero rows, which reads like an honest empty answer.
+
+        Args:
+            sparql: The SPARQL query text to check.
+            terms: The CURIEs a query may legally use, from RDF.SchemaSummary()['terms'].
+                Vocabulary checking is skipped when not supplied.
+            rowLimit: LIMIT appended to a SELECT that carries none.
+
+        Returns:
+            tuple: (query ready to run, "") when it passes, or (None, the reason it was
+                rejected) when it does not.
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+        """
+        try:
+            from rdflib.plugins.sparql import prepareQuery
+        except Exception as exc:
+            raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
+
+        if not sparql or not isinstance(sparql, str) or not sparql.strip():
+            return None, "The model returned an empty query."
+
+        body = re.sub(r"(?is)\bPREFIX\s+[\w.-]*:\s*<>", " ", _ScanText(sparql))
+        firstKeyword = re.search(r"(?is)\b(SELECT|ASK|CONSTRUCT|DESCRIBE|INSERT|DELETE)\b", body)
+        if not firstKeyword:
+            return None, "No SELECT or ASK found - this does not look like a query."
+        if firstKeyword.group(1).upper() not in ("SELECT", "ASK"):
+            return None, f"{firstKeyword.group(1).upper()} is not allowed; write a SELECT or an ASK."
+
+        for keyword in FORBIDDEN_KEYWORDS:
+            # '?add' is a variable, not the ADD update operation
+            if re.search(rf"(?i)(?<![?$])\b{keyword}\b", body):
+                return None, f"'{keyword}' is not allowed in this query."
+
+        try:
+            prepareQuery(sparql)   # parses without touching the data
+        except Exception as exc:
+            return None, f"Syntax error: {exc}"
+
+        if terms:
+            unknown = sorted({
+                f"{prefix}:{local}"
+                for prefix, local in CURIE.findall(body)
+                if prefix not in UTILITY_PREFIXES and f"{prefix}:{local}" not in terms
+            })
+            if unknown:
+                return None, f"Not in the schema: {', '.join(unknown)}. Use only the listed vocabulary."
+
+        # A missing LIMIT is a defect in the query, not a reason to send it back to the model.
+        # ASK returns one boolean and rejects LIMIT outright, so it is left alone.
+        if firstKeyword.group(1).upper() == "SELECT" and not re.search(r"(?i)\bLIMIT\b", body):
+            sparql = f"{sparql.rstrip().rstrip('.')}\nLIMIT {rowLimit}"
+
+        return sparql, ""
+
+    @staticmethod
+    def ValidateUpdate(
+        sparql: Optional[str] = None,
+        terms: Optional[Set[str]] = None,
+    ) -> Tuple[Optional[str], str]:
+        """
+        Check an update before it is allowed to change a graph.
+
+        The same four passes as SPARQL.Validate, with the shape pass inverted: here a write is
+        the point, so INSERT and DELETE are the only openings accepted and everything that
+        replaces or empties a whole graph is not. An update is also confined to the default
+        graph - GRAPH, WITH and USING would send the model's edit somewhere the caller is not
+        looking.
+
+        Args:
+            sparql: The SPARQL Update text to check.
+            terms: The CURIEs an update may legally use. For an edit this is wider than the
+                graph's own vocabulary, because a new node may introduce a class the graph
+                does not carry yet - see Tool.RDFEditTerms. Vocabulary checking is skipped
+                when not supplied.
+
+        Returns:
+            tuple: (update ready to run, "") when it passes, or (None, the reason it was
+                rejected) when it does not.
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+        """
+        try:
+            from rdflib.plugins.sparql import prepareUpdate
+        except Exception as exc:
+            raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
+
+        if not sparql or not isinstance(sparql, str) or not sparql.strip():
+            return None, "The model returned an empty update."
+
+        body = re.sub(r"(?is)\bPREFIX\s+[\w.-]*:\s*<>", " ", _ScanText(sparql))
+        firstKeyword = re.search(
+            r"(?is)\b(INSERT|DELETE|SELECT|ASK|CONSTRUCT|DESCRIBE|DROP|CLEAR|LOAD|CREATE)\b", body)
+        if not firstKeyword:
+            return None, "No INSERT or DELETE found - this does not look like an update."
+        if firstKeyword.group(1).upper() not in ("INSERT", "DELETE"):
+            return None, (f"{firstKeyword.group(1).upper()} is not allowed; write an INSERT, "
+                          "a DELETE, or a DELETE ... INSERT ... WHERE.")
+
+        for keyword in FORBIDDEN_UPDATE_KEYWORDS:
+            # '?add' is a variable, not the ADD update operation
+            if re.search(rf"(?i)(?<![?$])\b{keyword}\b", body):
+                return None, f"'{keyword}' is not allowed in this update."
+
+        try:
+            prepareUpdate(sparql)   # parses without touching the data
+        except Exception as exc:
+            return None, f"Syntax error: {exc}"
+
+        if terms:
+            unknown = sorted({
+                f"{prefix}:{local}"
+                for prefix, local in CURIE.findall(body)
+                if prefix not in UTILITY_PREFIXES and f"{prefix}:{local}" not in terms
+            })
+            if unknown:
+                return None, f"Not in the vocabulary: {', '.join(unknown)}. Use only the listed terms."
+
+        return sparql, ""

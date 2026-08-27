@@ -1,6 +1,6 @@
 import pytest
 
-from btwin import SpatialElement
+from btwin import Serialization, SpatialElement, SpatialHierarchy
 
 
 class TestConstructor:
@@ -358,3 +358,120 @@ class TestSetPSetRelationshipErrors:
             pset={"@id": "pset-01", "@type": "ifc:IfcPropertySet"},
         )
         assert "ifc:HasPropertySets" in result["relationships"]
+
+
+class TestSpatialHierarchyByIFC:
+    """The IFC reader, against a file made on the spot."""
+
+    @staticmethod
+    def _model(path):
+        """2 storeys, 2 spaces each, and 3 zones: one per flat, one crossing storeys, one stray."""
+        ifcopenshell = pytest.importorskip("ifcopenshell")
+        pytest.importorskip("ifcopenshell.api")
+        import ifcopenshell.api
+
+        run = ifcopenshell.api.run
+        model = ifcopenshell.file(schema="IFC4")
+
+        project = run("root.create_entity", model, ifc_class="IfcProject", name="P")
+        site = run("root.create_entity", model, ifc_class="IfcSite", name="Site")
+        building = run("root.create_entity", model, ifc_class="IfcBuilding", name="Ferrovia 9")
+        run("aggregate.assign_object", model, products=[site], relating_object=project)
+        run("aggregate.assign_object", model, products=[building], relating_object=site)
+
+        spaces = {}
+        for level in (1, 2):
+            storey = run("root.create_entity", model, ifc_class="IfcBuildingStorey",
+                         name=f"Floor {level}")
+            run("aggregate.assign_object", model, products=[storey], relating_object=building)
+            for number in (1, 2):
+                space = run("root.create_entity", model, ifc_class="IfcSpace",
+                            name=f"S{level}.{number}")
+                space.LongName = f"Room {level}.{number}"
+                run("aggregate.assign_object", model, products=[space], relating_object=storey)
+                spaces[(level, number)] = space
+
+        flat = run("root.create_entity", model, ifc_class="IfcZone", name="Appartamento")
+        flat.LongName = "Appartamento A"
+        run("group.assign_group", model, products=[spaces[(1, 1)], spaces[(1, 2)]], group=flat)
+
+        # A zone over both storeys: a zone is not a level of the containment chain
+        stack = run("root.create_entity", model, ifc_class="IfcZone", name="Vano scale")
+        run("group.assign_group", model, products=[spaces[(1, 2)], spaces[(2, 2)]], group=stack)
+
+        # A zone whose only space is in another building, and a zone with no members at all
+        other = run("root.create_entity", model, ifc_class="IfcBuilding", name="Elsewhere")
+        run("aggregate.assign_object", model, products=[other], relating_object=site)
+        outside = run("root.create_entity", model, ifc_class="IfcSpace", name="X")
+        run("aggregate.assign_object", model, products=[outside], relating_object=other)
+        stray = run("root.create_entity", model, ifc_class="IfcZone", name="Stray")
+        run("group.assign_group", model, products=[outside], group=stray)
+        run("root.create_entity", model, ifc_class="IfcZone", name="Empty")
+
+        model.write(str(path))
+        return model
+
+    @pytest.fixture
+    def hierarchy(self, tmp_path):
+        path = tmp_path / "zones.ifc"
+        self._model(path)
+        return SpatialHierarchy.ByIFC(path)
+
+    def test_reads_the_spatial_chain(self, hierarchy):
+        assert hierarchy["building"]["name"] == "Ferrovia 9"
+        assert len(hierarchy["storeys"]) == 2 and len(hierarchy["spaces"]) == 4
+
+    def test_reads_the_zones(self, hierarchy):
+        names = sorted(zone["name"] for zone in hierarchy["zones"])
+        assert names == ["Appartamento A", "Vano scale"]   # LongName wins over Name
+        assert all(zone["@type"] == "brick:Zone" for zone in hierarchy["zones"])
+
+    def test_a_zone_points_at_the_building(self, hierarchy):
+        buildingUID = hierarchy["building"]["@id"]
+        for zone in hierarchy["zones"]:
+            targets = zone["relationships"]["brick:hasLocation"]
+            assert targets == [{"@id": buildingUID, "@type": "bot:Building"}]
+
+    def test_a_space_points_at_its_zones_as_well_as_its_storey(self, hierarchy):
+        byName = {space["name"]: space for space in hierarchy["spaces"]}
+        zoneUIDs = {zone["name"]: zone["@id"] for zone in hierarchy["zones"]}
+        targets = {t["@id"] for t in byName["Room 1.2"]["relationships"]["brick:hasLocation"]}
+        # Its storey, its flat and the stairwell: three links under the one predicate
+        assert len(targets) == 3
+        assert {zoneUIDs["Appartamento A"], zoneUIDs["Vano scale"]} <= targets
+
+    def test_a_zone_may_cross_storeys(self, hierarchy):
+        stack = next(z for z in hierarchy["zones"] if z["name"] == "Vano scale")
+        members = [space for space in hierarchy["spaces"]
+                   if any(t["@id"] == stack["@id"]
+                          for t in space["relationships"]["brick:hasLocation"])]
+        assert sorted(space["name"] for space in members) == ["Room 1.2", "Room 2.2"]
+
+    def test_a_space_outside_the_building_takes_its_zone_with_it(self, hierarchy):
+        assert "Stray" not in {zone["name"] for zone in hierarchy["zones"]}
+
+    def test_an_empty_zone_is_left_out(self, hierarchy):
+        assert "Empty" not in {zone["name"] for zone in hierarchy["zones"]}
+
+    def test_the_result_serializes(self, hierarchy):
+        objects = [hierarchy["building"], *hierarchy["storeys"], *hierarchy["spaces"],
+                   *hierarchy["zones"]]
+        jsonld = Serialization.JSONLDByObjects(objects=objects)
+        assert len(jsonld["@graph"]) == 9
+        assert set(jsonld["@context"]) == {"bot", "brick"}
+
+    def test_a_file_without_a_building_gives_empty_lists(self, tmp_path):
+        ifcopenshell = pytest.importorskip("ifcopenshell")
+        path = tmp_path / "empty.ifc"
+        ifcopenshell.file(schema="IFC4").write(str(path))
+        assert SpatialHierarchy.ByIFC(path) == {"building": None, "storeys": [], "spaces": [],
+                                                "zones": []}
+
+    def test_missing_path_raises(self):
+        with pytest.raises(ValueError):
+            SpatialHierarchy.ByIFC()
+
+    def test_missing_file_raises(self, tmp_path):
+        pytest.importorskip("ifcopenshell")
+        with pytest.raises(OSError):
+            SpatialHierarchy.ByIFC(tmp_path / "nope.ifc")

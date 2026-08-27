@@ -45,7 +45,7 @@ for obj in [site, building, storey, space, ahu]:
 print(f"Nodes: {G.number_of_nodes()}, Edges: {G.number_of_edges()}")
 
 # Export to JSON-LD
-jsonld = Serialization.JSONLODByObjects([site, building, storey, space, ahu])
+jsonld = Serialization.JSONLDByObjects([site, building, storey, space, ahu])
 ```
 
 ## Next Steps

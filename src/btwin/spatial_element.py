@@ -5,14 +5,15 @@ SPATIAL ELEMENT MODULE
 This module defines the SpatialElement class, which provides the base representation
 for spatial entities in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 # Dependencies
-from typing import Any, Dict, Iterable, Optional
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 # BTWIN modules
-from btwin.schema import Schema
+from .schema import Schema
 
 
 # Functions
@@ -440,4 +441,181 @@ class SpatialElement:
             f"Unable to resolve UID: none of the keys [{keysList}] "
             "contain a non-empty string value."
         )
+
+
+class SpatialHierarchy():
+
+    @staticmethod
+    def ByIFC(
+        ifcFilePath: Optional[Union[str, Path]] = None,
+        *,
+        relationshipName: str = "brick:hasLocation",
+        validate: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Extract the spatial hierarchy of an IFC model as BTWIN objects.
+
+        Maps IfcBuilding to 'bot:Building', IfcBuildingStorey to 'bot:Storey',
+        IfcSpace to 'bot:Space' and IfcZone to 'brick:Zone', using each entity's GlobalId
+        as UID. Containment is read from the IFC decomposition (and from spatial
+        containment as a fallback) and written as upward relationships:
+        space -> storey -> building.
+
+        A zone is not part of that chain. IfcZone is a group, so its members are read from
+        IfcRelAssignsToGroup instead, and the membership is written the way the schema
+        allows it: the space points at the zone, as it already points at its storey, and
+        the zone itself points at the building. A space may therefore be in several zones,
+        and a zone with no space in this building is left out.
+
+        Args:
+            ifcFilePath (str | Path, optional): Path to the IFC file to parse.
+            relationshipName (str, optional): Predicate linking a child to its parent.
+                Default 'brick:hasLocation'.
+            validate (bool, optional): If True, validate each relationship against
+                `Schema.RelationshipNames()`. Default True.
+
+        Returns:
+            dict: {'building': dict | None, 'storeys': list[dict], 'spaces': list[dict],
+                'zones': list[dict]}. 'building' is None and the lists are empty when the
+                file has no IfcBuilding. Every object is ready for Serialization.
+
+        Raises:
+            ImportError: If ifcopenshell is not installed.
+            ValueError:  If `ifcFilePath` is not provided, or if a relationship is
+                         rejected while `validate=True`.
+            OSError:     If the IFC file does not exist or cannot be read.
+        """
+        # Import ifcopenshell locally to provide a clear error if it's missing
+        try:
+            import ifcopenshell
+        except Exception as exc:
+            raise ImportError("ifcopenshell is required. Install with `pip install ifcopenshell`.") from exc
+
+        # --- Validate input ----------------------------------------------------
+        if not ifcFilePath:
+            raise ValueError("ifcFilePath must be provided.")
+
+        path = Path(ifcFilePath)
+        if not path.exists():
+            raise OSError(f"IFC file not found: {path}")
+
+        try:
+            ifcFile = ifcopenshell.open(str(path))
+        except Exception as exc:
+            raise OSError(f"Failed to open IFC file '{path}'.") from exc
+
+        # --- Helpers -----------------------------------------------------------
+        def elementName(ifcEntity) -> Optional[str]:
+            """Prefer LongName, fall back to Name; ignore empty strings."""
+            for candidate in (getattr(ifcEntity, "LongName", None), getattr(ifcEntity, "Name", None)):
+                if isinstance(candidate, str) and candidate.strip():
+                    return candidate.strip()
+            return None
+
+        def childrenOf(ifcEntity, ifcClass: str) -> List[Any]:
+            """Children of a spatial element, via decomposition and spatial containment."""
+            found: List[Any] = []
+            seen = set()
+            for rel in getattr(ifcEntity, "IsDecomposedBy", None) or []:
+                for child in rel.RelatedObjects or []:
+                    if child.is_a(ifcClass) and child.GlobalId not in seen:
+                        seen.add(child.GlobalId)
+                        found.append(child)
+            for rel in getattr(ifcEntity, "ContainsElements", None) or []:
+                for child in rel.RelatedElements or []:
+                    if child.is_a(ifcClass) and child.GlobalId not in seen:
+                        seen.add(child.GlobalId)
+                        found.append(child)
+            return found
+
+        # --- Building (first one in the file) ----------------------------------
+        ifcBuildings = ifcFile.by_type("IfcBuilding")
+        if not ifcBuildings:
+            return {"building": None, "storeys": [], "spaces": [], "zones": []}
+
+        ifcBuilding = ifcBuildings[0]
+        building = SpatialElement.Constructor(
+            spatialElementUID=ifcBuilding.GlobalId,
+            spatialElementType="bot:Building",
+            name=elementName(ifcBuilding),
+        )
+
+        # --- Storeys, linked to the building -----------------------------------
+        storeys: List[Dict[str, Any]] = []
+        spaces: List[Dict[str, Any]] = []
+        for ifcStorey in childrenOf(ifcBuilding, "IfcBuildingStorey"):
+            storey = SpatialElement.Constructor(
+                spatialElementUID=ifcStorey.GlobalId,
+                spatialElementType="bot:Storey",
+                name=elementName(ifcStorey),
+            )
+            SpatialElement.SetLocationRelationship(
+                spatialElementObject=storey,
+                linkedObject=building,
+                relationshipName=relationshipName,
+                validate=validate,
+            )
+            storeys.append(storey)
+
+            # --- Spaces, linked to their storey ---------------------------------
+            for ifcSpace in childrenOf(ifcStorey, "IfcSpace"):
+                space = SpatialElement.Constructor(
+                    spatialElementUID=ifcSpace.GlobalId,
+                    spatialElementType="bot:Space",
+                    name=elementName(ifcSpace),
+                )
+                SpatialElement.SetLocationRelationship(
+                    spatialElementObject=space,
+                    linkedObject=storey,
+                    relationshipName=relationshipName,
+                    validate=validate,
+                )
+                spaces.append(space)
+
+        # --- Zones, and the spaces that belong to them --------------------------
+        # An IfcZone is a group rather than a spatial structure element, so its members come
+        # from IfcRelAssignsToGroup, not from decomposition. Only spaces already parsed above
+        # count: a zone whose spaces all sit in another building is not part of this hierarchy.
+        spaceByUID = {space["@id"]: space for space in spaces}
+        zones: List[Dict[str, Any]] = []
+        for ifcZone in ifcFile.by_type("IfcZone"):
+            grouped = getattr(ifcZone, "IsGroupedBy", None) or []
+            # IFC4 carries a set of relationships here, IFC2X3 a single one
+            if not isinstance(grouped, (list, tuple)):
+                grouped = [grouped]
+
+            members = [
+                spaceByUID[member.GlobalId]
+                for rel in grouped
+                for member in (getattr(rel, "RelatedObjects", None) or [])
+                if member.is_a("IfcSpace") and member.GlobalId in spaceByUID
+            ]
+            if not members:
+                continue
+
+            zone = SpatialElement.Constructor(
+                spatialElementUID=ifcZone.GlobalId,
+                spatialElementType="brick:Zone",
+                name=elementName(ifcZone),
+            )
+            SpatialElement.SetLocationRelationship(
+                spatialElementObject=zone,
+                linkedObject=building,
+                relationshipName=relationshipName,
+                validate=validate,
+            )
+
+            # The space points at the zone, not the reverse: that is the direction the schema
+            # allows, and it is the same shape as the link the space already has to its storey
+            for space in members:
+                SpatialElement.SetLocationRelationship(
+                    spatialElementObject=space,
+                    linkedObject=zone,
+                    relationshipName=relationshipName,
+                    validate=validate,
+                )
+            zones.append(zone)
+
+        # --- Return the parsed hierarchy ---------------------------------------
+        return {"building": building, "storeys": storeys, "spaces": spaces, "zones": zones}
 

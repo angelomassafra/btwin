@@ -4,7 +4,7 @@ BTWIN - A toolkit for graph-based decision support system prototypes in building
 POINT MODULE
 This module defines the functions to model and query points and timeseries via the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 # Dependencies

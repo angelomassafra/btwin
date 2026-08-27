@@ -5,7 +5,7 @@ SCENARIO MODULE
 This module defines the Scenario class, which provides the base representation
 for scenario modeling in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 

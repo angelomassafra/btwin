@@ -90,7 +90,7 @@ print(f"Nodes: {G.number_of_nodes()}, Edges: {G.number_of_edges()}")
 ```python
 from btwin import Serialization
 
-jsonld = Serialization.JSONLODByObjects(
+jsonld = Serialization.JSONLDByObjects(
     [site, building, storey, space, ahu],
     savePath="my_building.json"
 )

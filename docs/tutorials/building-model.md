@@ -56,7 +56,7 @@ from btwin import Serialization
 
 all_objects = [site, building, ground, first, lab, office, lecture]
 
-jsonld = Serialization.JSONLODByObjects(
+jsonld = Serialization.JSONLDByObjects(
     all_objects,
     savePath="campus_model.json"
 )

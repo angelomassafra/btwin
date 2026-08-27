@@ -32,7 +32,7 @@ site = SpatialElement.Constructor("site-01", "bot:Site", name="Campus")
 building = SpatialElement.Constructor("bldg-01", "bot:Building", name="Main Hall")
 SpatialElement.SetLocationRelationship(building, linkedObject=site)
 
-jsonld = Serialization.JSONLODByObjects(
+jsonld = Serialization.JSONLDByObjects(
     [site, building],
     savePath="building.json"
 )
@@ -48,7 +48,7 @@ The resulting document contains:
 By default, `strictValidation=True` raises errors for unknown classes or relationships. Set it to `False` to allow custom predicates:
 
 ```python
-jsonld = Serialization.JSONLODByObjects(
+jsonld = Serialization.JSONLDByObjects(
     objects,
     strictValidation=False
 )

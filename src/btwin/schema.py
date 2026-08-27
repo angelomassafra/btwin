@@ -5,7 +5,7 @@ BTWIN - A toolkit for graph-based decision support system prototypes in building
 ONTOLOGY MODULE
 This module defines the Schema class, which provides the base semantics and ontological principles in the BTWIN toolkit.
 
-© Angelo Massafra, 2025
+© Angelo Massafra, 2026
 """
 
 class Schema():
@@ -79,6 +79,7 @@ class Schema():
                     {"subject": botClasses["bot:Storey"],   "object": brickLocation["bot:Building"]},
                     {"subject": botClasses["bot:Building"], "object": brickLocation["bot:Site"]},
                     {"subject": botClasses["bot:Site"],     "object": brickLocation["brick:Region"]},
+                    {"subject": brickLocation["brick:Zone"],        "object": brickLocation["bot:Storey"]},
                     {"subject": brickLocation["brick:Zone"],        "object": brickLocation["bot:Building"]},
                     {"subject": brickLocation["brick:Energy_Zone"], "object": brickLocation["bot:Building"]},
                     {"subject": brickLocation["brick:Fire_Zone"],   "object": brickLocation["bot:Building"]},

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "btwin"
-version = "0.5.2"
+version = "0.5.3"
 description = "A toolkit for graph-based decision support system prototypes in building management"
 readme = "README.md"
 license = "PolyForm-Noncommercial-1.0.0"
@@ -32,6 +32,9 @@ dependencies = [
 dev = ["pytest", "pytest-cov", "ruff"]
 viz = ["matplotlib", "plotly", "kaleido"]
 neo4j = ["neo4j"]
+rdf = ["rdflib"]
+pdf = ["pypdf", "pymupdf"]
+llm = ["rdflib", "langchain", "langchain-openai", "pypdf", "pymupdf"]
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
@@ -50,6 +53,10 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Test this checkout's source, not whatever `btwin` an editable install resolves to: the
+# editable link can point at a sibling version folder, and the suite would silently pass
+# against the wrong code.
+pythonpath = ["src"]
 
 [tool.coverage.run]
 omit = ["src/btwin/plot.py"]
