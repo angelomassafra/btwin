@@ -13,7 +13,9 @@ from btwin import RDF, NetworkX, Property, PropertySet, SpatialElement
 class TestValidateAcceptsPointAndEquipment:
     """
     Validate checked node types against Schema.Types(), which stops at brick:Point and
-    brick:Equipment, so every concrete sensor and asset reported as invalid.
+    brick:Equipment, so every concrete sensor and asset reported as invalid. It now
+    validates against the export vocabulary, which is the superset of everything BTwin
+    can represent.
     """
 
     def _graph(self, nodeType):
@@ -39,6 +41,71 @@ class TestValidateAcceptsPointAndEquipment:
     def test_equipment_types_are_valid(self, nodeType):
         report = NetworkX.Validate(self._graph(nodeType), printReport=False)
         assert report["ok"] is True, report["invalidNodes"]
+
+    @pytest.mark.parametrize("nodeType", [
+        # in the export vocabulary but named by no constructor list: these were rejected
+        # even after the first widening, which was built from Equipment.Types()
+        "brick:Packaged_Heat_Pump",
+        "brick:Electric_Boiler",
+        "brick:PM1_Sensor",
+        "brick:TVOC_Sensor",
+        "ifc:IfcSensor",
+    ])
+    def test_export_only_types_are_valid(self, nodeType):
+        report = NetworkX.Validate(self._graph(nodeType), printReport=False)
+        assert report["ok"] is True, report["invalidNodes"]
+
+    def test_everything_exportable_validates(self):
+        """
+        The two vocabularies must not drift again: anything JSONLDByObjects can write
+        has to pass Validate, classes and predicates alike.
+        """
+        import networkx as nx
+
+        from btwin import Serialization
+
+        iris = Serialization.IRIs()
+
+        G = nx.MultiDiGraph()
+        for index, curie in enumerate(iris["classes"]):
+            G.add_node(f"n{index}", type=curie)
+        for index, predicate in enumerate(iris["properties"]):
+            G.add_edge("n0", f"n{index + 1}", type=predicate)
+
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["invalidNodes"] == []
+        assert report["invalidEdges"] == []
+
+    @pytest.mark.parametrize("predicate", [
+        # Equipment's own setters emit these by default, yet Schema.RelationshipNames()
+        # does not list them, so every such edge reported as invalid
+        "brick:isPartOf",
+        "brick:feeds",
+        "brick:hasPart",
+        "eko:hasEvaluationTimestep",
+    ])
+    def test_export_only_predicates_are_valid(self, predicate):
+        import networkx as nx
+
+        G = nx.MultiDiGraph()
+        G.add_node("a", type="brick:Air_Handling_Unit")
+        G.add_node("b", type="brick:System")
+        G.add_edge("a", "b", type=predicate)
+
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["ok"] is True, report["invalidEdges"]
+
+    def test_unknown_predicate_is_still_rejected(self):
+        import networkx as nx
+
+        G = nx.MultiDiGraph()
+        G.add_node("a", type="bot:Space")
+        G.add_node("b", type="bot:Storey")
+        G.add_edge("a", "b", type="brick:notAThing")
+
+        report = NetworkX.Validate(G, printReport=False)
+        assert report["ok"] is False
+        assert [e["foundType"] for e in report["invalidEdges"]] == ["brick:notAThing"]
 
     def test_unknown_type_is_still_rejected(self):
         report = NetworkX.Validate(self._graph("brick:Not_A_Real_Class"), printReport=False)

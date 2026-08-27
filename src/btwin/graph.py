@@ -16,9 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Union
 
 # BTWIN modules
-from .equipment import Equipment
-from .point import Point
 from .schema import Schema
+from .serialization import Serialization
 
 
 def _mark(ok: bool) -> str:
@@ -2120,14 +2119,21 @@ class NetworkX():
         except Exception as exc:
             raise TypeError("Failed to load class types from schemaProvider.Types().") from exc
 
-        # Schema.Types() covers spatial and structural classes only; the concrete Brick
-        # classes that Point and Equipment hand out live in their own vocabularies. Union
-        # them in, or every sensor and every asset in the graph reports as invalid.
+        # Schema.Types() covers spatial and structural classes only, stopping at
+        # brick:Point and brick:Equipment. Serialization.IRIs() is the authority for what
+        # BTwin can actually represent: it folds in the point and equipment vocabularies
+        # and carries classes that appear on export alone, so validating against it means
+        # anything that can be written to JSON-LD also validates.
         # A caller who supplied their own provider gets exactly what that provider allows.
-        if schemaProvider is None:
-            allowedNodeTypes |= set(Point.Types()) | set(Equipment.Types())
-
         allowedEdgeTypes: Set[str] = set(relNames or [])
+
+        if schemaProvider is None:
+            iris = Serialization.IRIs()
+            allowedNodeTypes |= set(iris["classes"])
+            # Same story for predicates: Schema.RelationshipNames() lists ten, while the
+            # export vocabulary carries nineteen - including brick:feeds and
+            # brick:isPartOf, which Equipment's own relationship setters emit by default.
+            allowedEdgeTypes |= set(iris["properties"])
 
         # --- Prepare report containers -----------------------------------------
         invalidNodes = []
