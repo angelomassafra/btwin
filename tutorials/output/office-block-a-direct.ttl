@@ -1,0 +1,124 @@
+@prefix bot: <https://w3id.org/bot#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix btwin: <btwin#> .
+@prefix eko: <http://energy.linkeddata.es/em-kpi/ontology#> .
+@prefix ifc: <https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/officeblocka/doc-01> a btwin:Document ;
+    rdfs:label "O&M manual, AHU-1" ;
+    btwin:isDocumentOf <https://example.org/officeblocka/bld-01> .
+
+<https://example.org/officeblocka/doc-02> a btwin:Document ;
+    rdfs:label "Commissioning report, Meeting Room" ;
+    btwin:isDocumentOf <https://example.org/officeblocka/space-02> .
+
+<https://example.org/officeblocka/kpiset-2026Q1> a btwin:KPISet ;
+    rdfs:label "Energy & comfort, 2026 Q1" ;
+    eko:hasAssociatedObject <https://example.org/officeblocka/bld-01> .
+
+<https://example.org/officeblocka/pt-a-01> a brick:Current_Sensor ;
+    rdfs:label "Main riser current" ;
+    brick:hasLocation <https://example.org/officeblocka/bld-01> .
+
+<https://example.org/officeblocka/pt-c-01> a brick:CO2_Sensor ;
+    rdfs:label "Meeting Room CO2" ;
+    brick:hasLocation <https://example.org/officeblocka/space-02> .
+
+<https://example.org/officeblocka/pt-c-02> a brick:CO2_Sensor ;
+    rdfs:label "Open Office CO2" ;
+    brick:hasLocation <https://example.org/officeblocka/space-03> .
+
+<https://example.org/officeblocka/pt-h-01> a brick:Humidity_Sensor ;
+    rdfs:label "Open Office relative humidity" ;
+    brick:hasLocation <https://example.org/officeblocka/space-03> .
+
+<https://example.org/officeblocka/pt-t-01> a brick:Temperature_Sensor ;
+    rdfs:label "Reception air temperature" ;
+    brick:hasLocation <https://example.org/officeblocka/space-01> .
+
+<https://example.org/officeblocka/pt-t-02> a brick:Temperature_Sensor ;
+    rdfs:label "Meeting Room air temperature" ;
+    brick:hasLocation <https://example.org/officeblocka/space-02> .
+
+<https://example.org/officeblocka/pt-t-03> a brick:Temperature_Sensor ;
+    rdfs:label "Open Office air temperature" ;
+    brick:hasLocation <https://example.org/officeblocka/space-03> .
+
+<https://example.org/officeblocka/space-04> a bot:Space ;
+    rdfs:label "Corridor" ;
+    brick:hasLocation <https://example.org/officeblocka/storey-01> ;
+    ifc:HasPropertySets <https://example.org/officeblocka/pset-space-04> .
+
+<https://example.org/officeblocka/pset-space-01> a ifc:IfcPropertySet ;
+    rdfs:label "Pset_SpaceCommon" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "reception" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "netFloorArea" ;
+            ifc:NominalValue 4.2e+01 ;
+            ifc:Unit "sqm" ] .
+
+<https://example.org/officeblocka/pset-space-02> a ifc:IfcPropertySet ;
+    rdfs:label "Pset_SpaceCommon" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "meeting" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "netFloorArea" ;
+            ifc:NominalValue 2.85e+01 ;
+            ifc:Unit "sqm" ] .
+
+<https://example.org/officeblocka/pset-space-03> a ifc:IfcPropertySet ;
+    rdfs:label "Pset_SpaceCommon" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "netFloorArea" ;
+            ifc:NominalValue 9.6e+01 ;
+            ifc:Unit "sqm" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "office" ] .
+
+<https://example.org/officeblocka/pset-space-04> a ifc:IfcPropertySet ;
+    rdfs:label "Pset_SpaceCommon" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "netFloorArea" ;
+            ifc:NominalValue 1.8e+01 ;
+            ifc:Unit "sqm" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "circulation" ] .
+
+<https://example.org/officeblocka/space-01> a bot:Space ;
+    rdfs:label "Reception" ;
+    brick:hasLocation <https://example.org/officeblocka/storey-00> ;
+    ifc:HasPropertySets <https://example.org/officeblocka/pset-space-01> .
+
+<https://example.org/officeblocka/storey-00> a bot:Storey ;
+    rdfs:label "Ground Floor" ;
+    brick:hasLocation <https://example.org/officeblocka/bld-01> .
+
+<https://example.org/officeblocka/storey-01> a bot:Storey ;
+    rdfs:label "First Floor" ;
+    brick:hasLocation <https://example.org/officeblocka/bld-01> .
+
+<https://example.org/officeblocka/zone-01> a brick:Zone ;
+    rdfs:label "Thermal Zone North" .
+
+<https://example.org/officeblocka/space-02> a bot:Space ;
+    rdfs:label "Meeting Room" ;
+    brick:hasLocation <https://example.org/officeblocka/storey-00>,
+        <https://example.org/officeblocka/zone-01> ;
+    ifc:HasPropertySets <https://example.org/officeblocka/pset-space-02> .
+
+<https://example.org/officeblocka/space-03> a bot:Space ;
+    rdfs:label "Open Office" ;
+    brick:hasLocation <https://example.org/officeblocka/storey-01>,
+        <https://example.org/officeblocka/zone-01> ;
+    ifc:HasPropertySets <https://example.org/officeblocka/pset-space-03> .
+
+<https://example.org/officeblocka/bld-01> a bot:Building ;
+    rdfs:label "Office Block A" .
+

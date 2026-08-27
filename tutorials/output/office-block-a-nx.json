@@ -1,0 +1,313 @@
+{
+  "directed": true,
+  "edges": [
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "storey-00",
+      "subjectType": "bot:Storey",
+      "target": "bld-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "storey-01",
+      "subjectType": "bot:Storey",
+      "target": "bld-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Storey",
+      "source": "space-01",
+      "subjectType": "bot:Space",
+      "target": "storey-00",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "ifc:IfcPropertySet",
+      "source": "space-01",
+      "subjectType": "bot:Space",
+      "target": "pset-space-01",
+      "type": "ifc:HasPropertySets"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Storey",
+      "source": "space-02",
+      "subjectType": "bot:Space",
+      "target": "storey-00",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "brick:Zone",
+      "source": "space-02",
+      "subjectType": "bot:Space",
+      "target": "zone-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "ifc:IfcPropertySet",
+      "source": "space-02",
+      "subjectType": "bot:Space",
+      "target": "pset-space-02",
+      "type": "ifc:HasPropertySets"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Storey",
+      "source": "space-03",
+      "subjectType": "bot:Space",
+      "target": "storey-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "brick:Zone",
+      "source": "space-03",
+      "subjectType": "bot:Space",
+      "target": "zone-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "ifc:IfcPropertySet",
+      "source": "space-03",
+      "subjectType": "bot:Space",
+      "target": "pset-space-03",
+      "type": "ifc:HasPropertySets"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Storey",
+      "source": "space-04",
+      "subjectType": "bot:Space",
+      "target": "storey-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "ifc:IfcPropertySet",
+      "source": "space-04",
+      "subjectType": "bot:Space",
+      "target": "pset-space-04",
+      "type": "ifc:HasPropertySets"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "pt-t-01",
+      "subjectType": "brick:Temperature_Sensor",
+      "target": "space-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "pt-t-02",
+      "subjectType": "brick:Temperature_Sensor",
+      "target": "space-02",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "pt-c-01",
+      "subjectType": "brick:CO2_Sensor",
+      "target": "space-02",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "pt-t-03",
+      "subjectType": "brick:Temperature_Sensor",
+      "target": "space-03",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "pt-c-02",
+      "subjectType": "brick:CO2_Sensor",
+      "target": "space-03",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "pt-h-01",
+      "subjectType": "brick:Humidity_Sensor",
+      "target": "space-03",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "pt-a-01",
+      "subjectType": "brick:Current_Sensor",
+      "target": "bld-01",
+      "type": "brick:hasLocation"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "kpiset-2026Q1",
+      "subjectType": "btwin:KPISet",
+      "target": "bld-01",
+      "type": "eko:hasAssociatedObject"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Building",
+      "source": "doc-01",
+      "subjectType": "btwin:Document",
+      "target": "bld-01",
+      "type": "btwin:isDocumentOf"
+    },
+    {
+      "key": 0,
+      "objectType": "bot:Space",
+      "source": "doc-02",
+      "subjectType": "btwin:Document",
+      "target": "space-02",
+      "type": "btwin:isDocumentOf"
+    }
+  ],
+  "graph": {},
+  "multigraph": true,
+  "nodes": [
+    {
+      "id": "bld-01",
+      "name": "Office Block A",
+      "type": "bot:Building"
+    },
+    {
+      "id": "storey-00",
+      "name": "Ground Floor",
+      "type": "bot:Storey"
+    },
+    {
+      "id": "storey-01",
+      "name": "First Floor",
+      "type": "bot:Storey"
+    },
+    {
+      "id": "zone-01",
+      "name": "Thermal Zone North",
+      "type": "brick:Zone"
+    },
+    {
+      "id": "space-01",
+      "name": "Reception",
+      "type": "bot:Space"
+    },
+    {
+      "id": "space-02",
+      "name": "Meeting Room",
+      "type": "bot:Space"
+    },
+    {
+      "id": "space-03",
+      "name": "Open Office",
+      "type": "bot:Space"
+    },
+    {
+      "id": "space-04",
+      "name": "Corridor",
+      "type": "bot:Space"
+    },
+    {
+      "id": "pset-space-01",
+      "name": "Pset_SpaceCommon",
+      "netFloorArea": 42.0,
+      "occupancyType": "reception",
+      "type": "ifc:IfcPropertySet"
+    },
+    {
+      "id": "pset-space-02",
+      "name": "Pset_SpaceCommon",
+      "netFloorArea": 28.5,
+      "occupancyType": "meeting",
+      "type": "ifc:IfcPropertySet"
+    },
+    {
+      "id": "pset-space-03",
+      "name": "Pset_SpaceCommon",
+      "netFloorArea": 96.0,
+      "occupancyType": "office",
+      "type": "ifc:IfcPropertySet"
+    },
+    {
+      "id": "pset-space-04",
+      "name": "Pset_SpaceCommon",
+      "netFloorArea": 18.0,
+      "occupancyType": "circulation",
+      "type": "ifc:IfcPropertySet"
+    },
+    {
+      "id": "pt-t-01",
+      "name": "Reception air temperature",
+      "type": "brick:Temperature_Sensor"
+    },
+    {
+      "id": "pt-t-02",
+      "name": "Meeting Room air temperature",
+      "type": "brick:Temperature_Sensor"
+    },
+    {
+      "id": "pt-c-01",
+      "name": "Meeting Room CO2",
+      "type": "brick:CO2_Sensor"
+    },
+    {
+      "id": "pt-t-03",
+      "name": "Open Office air temperature",
+      "type": "brick:Temperature_Sensor"
+    },
+    {
+      "id": "pt-c-02",
+      "name": "Open Office CO2",
+      "type": "brick:CO2_Sensor"
+    },
+    {
+      "id": "pt-h-01",
+      "name": "Open Office relative humidity",
+      "type": "brick:Humidity_Sensor"
+    },
+    {
+      "id": "pt-a-01",
+      "name": "Main riser current",
+      "type": "brick:Current_Sensor"
+    },
+    {
+      "Energy use intensity": 31.4,
+      "Energy use intensity_unit": "kWh/sqm",
+      "Hours within comfort band": 1683,
+      "Hours within comfort band_unit": "h",
+      "Mean CO2 concentration": 742.0,
+      "Mean CO2 concentration_unit": "ppm",
+      "associatedObjectId": "bld-01",
+      "associatedObjectType": "bot:Building",
+      "hasBeginning": "2026-01-01T00:00:00Z",
+      "hasEnd": "2026-03-31T23:59:59Z",
+      "id": "kpiset-2026Q1",
+      "name": "Energy & comfort, 2026 Q1",
+      "type": "btwin:KPISet"
+    },
+    {
+      "id": "doc-01",
+      "name": "O&M manual, AHU-1",
+      "type": "btwin:Document"
+    },
+    {
+      "id": "doc-02",
+      "name": "Commissioning report, Meeting Room",
+      "type": "btwin:Document"
+    }
+  ]
+}
