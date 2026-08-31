@@ -99,7 +99,7 @@ Serialization.JSONLDByObjects(objects, savePath="my_building.json")
 
 ## Tutorials
 
-Four runnable notebooks live in [`tutorials/`](https://github.com/angelomassafra/btwin/blob/main/tutorials), numbered in the order they are meant
+Five runnable notebooks live in [`tutorials/`](https://github.com/angelomassafra/btwin/blob/main/tutorials), numbered in the order they are meant
 to be read. Each sits in its own self-contained folder and is committed with its outputs, so they
 can be read on GitHub without running anything.
 
@@ -109,11 +109,12 @@ can be read on GitHub without running anything.
 | 01 | [Create a BTwin graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/01-create-a-btwin-graph/create-a-btwin-graph.ipynb) | Builds a two-storey office from synthetic data — spatial hierarchy, property sets, sensors, a KPI set, documents — then serializes, queries and draws it. No LLM. |
 | 02 | [Move a graph between formats](https://github.com/angelomassafra/btwin/blob/main/tutorials/02-graph-formats/graph-formats.ipynb) | JSON-LD, NetworkX, RDF/SPARQL and Neo4j, and a measured account of what each conversion keeps or drops. |
 | 03 | [LLM in action](https://github.com/angelomassafra/btwin/blob/main/tutorials/03-llm-in-action/llm-in-action.ipynb) | Builds a graph from an English prompt and queries it in English. Requires an API key and bills your account. |
+| 04 | [Chat with an LLM](https://github.com/angelomassafra/btwin/blob/main/tutorials/04-chat-with-llm/chat-with-llm.ipynb) | Holds a conversation with a graph: follow-up questions that resolve against what was already said, and edits confirmed before they land. Requires an API key. |
 
-00 is a reference to look things up in; 01 to 03 are a narrative that builds one graph and puts it
-to work. Those three write a self-contained interactive HTML page after every stage into their own
-`output/` folder, so you can click through the graph as it grows — open any `step-*.html` directly
-in a browser.
+00 is a reference to look things up in; 01 to 04 are a narrative that builds one graph and puts it
+to work. Tutorials 01 to 03 write a self-contained interactive HTML page after every stage into
+their own `output/` folder, so you can click through the graph as it grows — open any `step-*.html`
+directly in a browser.
 
 See [`tutorials/README.md`](https://github.com/angelomassafra/btwin/blob/main/tutorials/README.md) for what each one needs and how to run them.
 
@@ -145,6 +146,8 @@ The design principle is that **the model is never trusted to know the ontologies
 | `Cycle.RDFQueryByPrompt` | English question → SPARQL → rows → an English answer |
 | `Cycle.RDFEditByPrompt` | English request → a validated SPARQL `UPDATE` |
 | `Cycle.DocumentCreateByPrompt` | A PDF → an inferred `Document` node with its property set |
+| `Cycle.RDFChatTurn` | One conversation turn: route it, then answer or edit |
+| `Cycle.RDFChat` | The same, as a terminal chat that keeps its own history |
 
 `Tool` exposes the individual agents if you would rather drive the pipeline yourself, and
 `CostMeter` records tokens and cost for every call so a run's price is never a surprise.
@@ -168,12 +171,33 @@ Requests go to [OpenRouter](https://openrouter.ai) by default: set `OPENROUTER_A
 optionally `OPENROUTER_MODEL` (the default is `google/gemini-2.5-flash-lite`). `LLM.Constructor`
 takes a `baseURL`, so any OpenAI-compatible endpoint — including a local one — works too.
 
+### Talking to a graph
+
+`Cycle.RDFChat` is a terminal chat over the two RDF cycles. Each turn is routed first: a question
+goes to `RDFQueryByPrompt`, an edit to `RDFEditByPrompt`, and anything else is answered from the
+conversation alone. The router is also where the memory lives — it rewrites "and on the second
+floor?" into a question that stands on its own, so the cycles underneath stay stateless and an
+answer is still written from retrieved rows and nothing else.
+
+```python
+from btwin import RDF, Cycle
+
+graph = RDF.ByTTL("spatialHierarchy.ttl", baseIRI="https://example.org/frv9/")
+Cycle.RDFChat(graph, savePath="spatialHierarchy_edited.ttl")
+```
+
+An edit is shown as a triple diff and applied only if you confirm it, then written to `savePath` —
+never to the file the graph was read from. `Cycle.RDFChatTurn` is the same logic without the
+terminal, for a notebook or an application.
+
 **Know the limit.** The repair loop validates *syntax* and *vocabulary*. Nothing validates
 *meaning*. A model can invert the direction of a relationship and produce a query that is perfectly
-valid, passes every check, returns no rows, and yields a confident but wrong answer — tutorial 02
-demonstrates exactly this and checks the model's work against a hand-written query. Read the
-generated SPARQL, which is why `RDFQueryByPrompt` returns it, and treat an empty result as
-suspicious rather than as an answer.
+valid, passes every check, returns no rows, and yields a confident but wrong answer — tutorial 03
+demonstrates exactly this and checks the model's work against a hand-written query. `RDF.Chains`
+exists to narrow that gap: it hands the writer the multi-hop paths the data actually walks, each
+with a real example, so the composition is given rather than guessed. Read the generated SPARQL,
+which is why `RDFQueryByPrompt` returns it and why the chat prints it every turn, and treat an
+empty result as suspicious rather than as an answer.
 
 ## Documentation
 

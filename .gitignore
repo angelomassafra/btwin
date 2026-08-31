@@ -49,3 +49,6 @@ myproject/
 # spreadsheets and databases are regenerated on every run
 tutorials/**/output/*.png
 tutorials/**/output/*.xlsx
+
+# Test suite: kept on disk and run locally, not published with the package
+tests/

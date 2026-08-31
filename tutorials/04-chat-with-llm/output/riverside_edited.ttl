@@ -1,0 +1,41 @@
+@prefix bot: <https://w3id.org/bot#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://example.org/riverside/space-01> a bot:Space ;
+    rdfs:label "Reception" ;
+    brick:hasLocation <https://example.org/riverside/storey-00> .
+
+<https://example.org/riverside/space-02> a bot:Space ;
+    rdfs:label "Canteen" ;
+    brick:hasLocation <https://example.org/riverside/storey-00> .
+
+<https://example.org/riverside/space-03> a bot:Space ;
+    rdfs:label "Open Office" ;
+    brick:hasLocation <https://example.org/riverside/storey-01>,
+        <https://example.org/riverside/zone-01> .
+
+<https://example.org/riverside/space-04> a bot:Space ;
+    rdfs:label "Meeting Room" ;
+    brick:hasLocation <https://example.org/riverside/storey-01>,
+        <https://example.org/riverside/zone-01> .
+
+<https://example.org/riverside/space-05> a bot:Space ;
+    rdfs:label "Archive" ;
+    brick:hasLocation <https://example.org/riverside/storey-00> .
+
+<https://example.org/riverside/bld-01> a bot:Building ;
+    rdfs:label "Riverside Block" .
+
+<https://example.org/riverside/zone-01> a brick:Zone ;
+    rdfs:label "North Wing" ;
+    brick:hasLocation <https://example.org/riverside/storey-01> .
+
+<https://example.org/riverside/storey-00> a bot:Storey ;
+    rdfs:label "Ground Floor" ;
+    brick:hasLocation <https://example.org/riverside/bld-01> .
+
+<https://example.org/riverside/storey-01> a bot:Storey ;
+    rdfs:label "First Floor" ;
+    brick:hasLocation <https://example.org/riverside/bld-01> .
+

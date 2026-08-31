@@ -13,7 +13,101 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 # BTWIN modules
+from .property_set import Property, PropertySet
 from .schema import Schema
+
+# What an IFC quantity carries: the attribute holding the value, and the measure it is.
+# IfcPhysicalComplexQuantity is absent on purpose - it nests further quantities rather than
+# carrying a value of its own, and flattening it would invent property names.
+_IFC_QUANTITY_KINDS = {
+    "IfcQuantityLength": ("LengthValue", "IfcLengthMeasure"),
+    "IfcQuantityArea": ("AreaValue", "IfcAreaMeasure"),
+    "IfcQuantityVolume": ("VolumeValue", "IfcVolumeMeasure"),
+    "IfcQuantityCount": ("CountValue", "IfcCountMeasure"),
+    "IfcQuantityWeight": ("WeightValue", "IfcMassMeasure"),
+    "IfcQuantityTime": ("TimeValue", "IfcTimeMeasure"),
+}
+
+
+def _IFCUnitLabel(ifcUnit) -> Optional[str]:
+    """
+    A readable unit for one property, or None.
+
+    Most IFC properties carry no unit at all: the file states its units once, in the project's
+    IfcUnitAssignment, and every value is understood in those. None is therefore the ordinary
+    case rather than a failure, and it maps to a property with no 'unit'.
+    """
+    if ifcUnit is None:
+        return None
+    name = getattr(ifcUnit, "Name", None)
+    if not isinstance(name, str) or not name.strip():
+        return None
+    prefix = getattr(ifcUnit, "Prefix", None)
+    return f"{prefix}{name}" if isinstance(prefix, str) and prefix.strip() else name
+
+
+def _IFCProperty(ifcProperty) -> Optional[Dict[str, Any]]:
+    """
+    One IFC property as a BTWIN property, or None for a kind BTWIN cannot carry.
+
+    The datatype recorded is the IFC measure, not the Python type behind it: 'IfcAreaMeasure'
+    says what 14.44 means, where 'float' does not.
+    """
+    name = getattr(ifcProperty, "Name", None)
+    if not isinstance(name, str) or not name.strip():
+        return None
+
+    if ifcProperty.is_a("IfcPropertySingleValue"):
+        nominal = getattr(ifcProperty, "NominalValue", None)
+        if nominal is None:
+            return None
+        return Property.Constructor(
+            propertyName=name.strip(),
+            propertyValue=nominal.wrappedValue,
+            propertyQuantity=nominal.is_a(),
+            propertyUnit=_IFCUnitLabel(getattr(ifcProperty, "Unit", None)),
+        )
+
+    if ifcProperty.is_a("IfcPropertyEnumeratedValue"):
+        values = list(getattr(ifcProperty, "EnumerationValues", None) or [])
+        if not values:
+            return None
+        return Property.Constructor(
+            propertyName=name.strip(),
+            propertyValues=[value.wrappedValue for value in values],
+            propertyQuantity=values[0].is_a(),
+            propertyType="IfcPropertyEnumeratedValue",
+        )
+
+    # IfcPropertyListValue, IfcPropertyBoundedValue, IfcPropertyTableValue and
+    # IfcComplexProperty have no BTWIN counterpart, so they are left out rather than
+    # flattened into a shape the schema does not describe.
+    return None
+
+
+def _IFCQuantity(ifcQuantity) -> Optional[Dict[str, Any]]:
+    """
+    One IFC quantity as a BTWIN property.
+
+    A quantity is a measurement and a property is an assertion, but both are a name with a
+    typed value, and the graph has one shape for that. The distinction survives in the set's
+    own name, which is 'Qto_...' by IFC convention.
+    """
+    kind = _IFC_QUANTITY_KINDS.get(ifcQuantity.is_a())
+    name = getattr(ifcQuantity, "Name", None)
+    if kind is None or not isinstance(name, str) or not name.strip():
+        return None
+
+    attribute, measure = kind
+    value = getattr(ifcQuantity, attribute, None)
+    if value is None:
+        return None
+    return Property.Constructor(
+        propertyName=name.strip(),
+        propertyValue=value,
+        propertyQuantity=measure,
+        propertyUnit=_IFCUnitLabel(getattr(ifcQuantity, "Unit", None)),
+    )
 
 
 # Functions
@@ -208,12 +302,16 @@ class SpatialElement:
             raise ValueError("spatialElementObject must contain '@id' and '@type'.")
 
         # --- Resolve target UID/type -------------------------------------------
+        # A pset is always this one type, so it is settled before the branch below: leaving it
+        # to be bound only when `pset` is given made the psetUID-only path - the documented
+        # way to link a set by UID alone - raise UnboundLocalError instead of reaching its
+        # own check.
+        linkedObjectType = 'ifc:IfcPropertySet'
         if pset is not None:
             if "@id" not in pset or "@type" not in pset:
                 raise KeyError("linkedObject must contain '@id' and '@type'.")
             # Prefer explicit UID/type if passed; otherwise derive from object
             psetUID = psetUID or pset["@id"]
-            linkedObjectType = 'ifc:IfcPropertySet'
 
         if not psetUID or not isinstance(psetUID, str) or not psetUID.strip():
             raise ValueError("A non-empty linkedObjectUID must be provided or derivable from linkedObject['@id'].")
@@ -450,6 +548,7 @@ class SpatialHierarchy():
         ifcFilePath: Optional[Union[str, Path]] = None,
         *,
         relationshipName: str = "brick:hasLocation",
+        psetNames: Optional[Iterable[str]] = None,
         validate: bool = True,
     ) -> Dict[str, Any]:
         """
@@ -471,13 +570,21 @@ class SpatialHierarchy():
             ifcFilePath (str | Path, optional): Path to the IFC file to parse.
             relationshipName (str, optional): Predicate linking a child to its parent.
                 Default 'brick:hasLocation'.
+            psetNames (iterable[str], optional): Names of the property sets to read, matched
+                exactly against IfcPropertySet.Name and IfcElementQuantity.Name. Nothing is
+                read unless this is given: an authoring tool writes far more property sets
+                than a building model needs - a Revit export of eleven spatial elements
+                carries eighty-five of them, most describing the export rather than the
+                building - so which ones are worth keeping is the caller's judgement, not
+                a default. Quantity sets are read the same way, by name.
             validate (bool, optional): If True, validate each relationship against
                 `Schema.RelationshipNames()`. Default True.
 
         Returns:
             dict: {'building': dict | None, 'storeys': list[dict], 'spaces': list[dict],
-                'zones': list[dict]}. 'building' is None and the lists are empty when the
-                file has no IfcBuilding. Every object is ready for Serialization.
+                'zones': list[dict], 'psets': list[dict]}. 'building' is None and the lists
+                are empty when the file has no IfcBuilding; 'psets' is empty unless
+                `psetNames` asked for something. Every object is ready for Serialization.
 
         Raises:
             ImportError: If ifcopenshell is not installed.
@@ -528,10 +635,46 @@ class SpatialHierarchy():
                         found.append(child)
             return found
 
+        wanted = set(psetNames or ())
+        psetByUID: Dict[str, Dict[str, Any]] = {}
+
+        def attachPSets(spatialObject: Dict[str, Any], ifcEntity) -> None:
+            """Link every named property set of `ifcEntity` to `spatialObject`."""
+            if not wanted:
+                return
+            for rel in getattr(ifcEntity, "IsDefinedBy", None) or []:
+                definition = getattr(rel, "RelatingPropertyDefinition", None)
+                if definition is None or getattr(definition, "Name", None) not in wanted:
+                    continue
+
+                # One IfcRelDefinesByProperties can define several elements at once, so a set
+                # shared by two spaces becomes one node with two owners rather than a copy
+                # each - which is also what makes the two spaces comparable in the graph.
+                uid = definition.GlobalId
+                pset = psetByUID.get(uid)
+                if pset is None:
+                    if definition.is_a("IfcPropertySet"):
+                        read = [_IFCProperty(p) for p in (definition.HasProperties or [])]
+                    elif definition.is_a("IfcElementQuantity"):
+                        read = [_IFCQuantity(q) for q in (definition.Quantities or [])]
+                    else:
+                        continue
+                    properties = [entry for entry in read if entry is not None]
+                    if not properties:
+                        # Every property was of a kind BTWIN cannot carry: an empty set would
+                        # claim the element has one when nothing of it survived
+                        continue
+                    pset = PropertySet.Constructor(psetUID=uid, psetName=definition.Name)
+                    pset["ifc:HasProperties"] = properties
+                    psetByUID[uid] = pset
+
+                SpatialElement.SetPSetRelationship(
+                    spatialElementObject=spatialObject, pset=pset, validate=validate)
+
         # --- Building (first one in the file) ----------------------------------
         ifcBuildings = ifcFile.by_type("IfcBuilding")
         if not ifcBuildings:
-            return {"building": None, "storeys": [], "spaces": [], "zones": []}
+            return {"building": None, "storeys": [], "spaces": [], "zones": [], "psets": []}
 
         ifcBuilding = ifcBuildings[0]
         building = SpatialElement.Constructor(
@@ -539,6 +682,7 @@ class SpatialHierarchy():
             spatialElementType="bot:Building",
             name=elementName(ifcBuilding),
         )
+        attachPSets(building, ifcBuilding)
 
         # --- Storeys, linked to the building -----------------------------------
         storeys: List[Dict[str, Any]] = []
@@ -555,6 +699,7 @@ class SpatialHierarchy():
                 relationshipName=relationshipName,
                 validate=validate,
             )
+            attachPSets(storey, ifcStorey)
             storeys.append(storey)
 
             # --- Spaces, linked to their storey ---------------------------------
@@ -570,6 +715,7 @@ class SpatialHierarchy():
                     relationshipName=relationshipName,
                     validate=validate,
                 )
+                attachPSets(space, ifcSpace)
                 spaces.append(space)
 
         # --- Zones, and the spaces that belong to them --------------------------
@@ -605,6 +751,8 @@ class SpatialHierarchy():
                 validate=validate,
             )
 
+            attachPSets(zone, ifcZone)
+
             # The space points at the zone, not the reverse: that is the direction the schema
             # allows, and it is the same shape as the link the space already has to its storey
             for space in members:
@@ -617,5 +765,6 @@ class SpatialHierarchy():
             zones.append(zone)
 
         # --- Return the parsed hierarchy ---------------------------------------
-        return {"building": building, "storeys": storeys, "spaces": spaces, "zones": zones}
+        return {"building": building, "storeys": storeys, "spaces": spaces, "zones": zones,
+                "psets": list(psetByUID.values())}
 

@@ -2801,6 +2801,172 @@ class RDF():
         return {"text": "\n".join(lines), "terms": terms, "prefixes": usedPrefixes}
 
     @staticmethod
+    def Chains(
+        rdfGraph=None,
+        maxDepth: int = 5,
+        maxChains: int = 25,
+        exampleChars: int = 40,
+    ) -> List[Dict[str, Any]]:
+        """
+        The multi-hop paths the data actually walks, each with one real example.
+
+        SchemaSummary's SHAPES section lists single hops, and leaves composing them to the
+        reader. That is where a query goes wrong: two hops that are each correct can be joined
+        into a path nothing walks, or joined backwards, and either way the result is a query
+        that is valid, parses, runs and matches nothing. Spelling the paths out removes the
+        composing step, and the worked example fixes the direction - 'Cucina is located in
+        Piano Terra' cannot be read the other way round, while an arrow between two class
+        names can.
+
+        Paths are enumerated over classes, not instances, so the work does not grow with the
+        size of the graph: a graph of ten spaces and one of ten thousand have the same handful
+        of shapes. Each candidate is then confirmed by walking real triples, which is what
+        keeps the list honest - a composition that no data realises finds no example and is
+        dropped rather than suggested.
+
+        Three rules keep the list short enough to be read:
+        - Only maximal paths. A path that is the opening of a longer one is already visible in
+          it, so listing both spends tokens to repeat itself.
+        - No trailing 'rdfs:label -> literal' hop. Every labelled thing has one, and SHAPES
+          says so already.
+        - No class twice in one path, which also stops a cycle from running forever.
+
+        Args:
+            rdfGraph: An rdflib.Graph instance to inspect.
+            maxDepth: The longest path to consider, in hops.
+            maxChains: How many paths to return. The longest survive a cut, since a long path
+                shows more of the graph's shape than a short one.
+            exampleChars: Where to cut a long value or label in an example.
+
+        Returns:
+            list[dict]: [{'template': str, 'example': str, 'hops': int}], shortest first, e.g.
+                {'template': 'bot:Space -brick:hasLocation-> bot:Storey '
+                             '-brick:hasLocation-> bot:Building',
+                 'example':  "'Cucina' -> 'P00 - Piano Terra' -> <...NgA>",
+                 'hops': 2}
+                Empty when the graph holds no path of two hops or more.
+
+        Raises:
+            ImportError: If `rdflib` is not installed.
+            ValueError:  If `rdfGraph` is None, or the bounds are below their minimum.
+        """
+        try:
+            from rdflib import BNode, Literal
+            from rdflib.namespace import RDF as RDFNamespace
+            from rdflib.namespace import RDFS
+        except Exception as exc:
+            raise ImportError("rdflib is required. Install with `pip install rdflib`.") from exc
+
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+        if maxDepth < 2:
+            raise ValueError("maxDepth must be at least 2: a single hop is already a shape.")
+        if maxChains < 1:
+            raise ValueError("maxChains must be at least 1.")
+
+        def classOf(term: Any) -> str:
+            """The class a term belongs to, in the same words SchemaSummary's SHAPES uses."""
+            if isinstance(term, Literal):
+                return f"literal ({RDF.Compact(rdfGraph, term.datatype)})" if term.datatype else "literal"
+            nodeType = rdfGraph.value(term, RDFNamespace.type)
+            name = RDF.Compact(rdfGraph, nodeType) if nodeType is not None else "(untyped)"
+            return f"[blank node] {name}" if isinstance(term, BNode) else name
+
+        # The class-level edges, which are SHAPES again, and the nodes each class holds. One
+        # pass over the graph builds both; everything after this reads these two maps.
+        adjacency: Dict[str, Set[Tuple[str, str]]] = {}
+        predicateOf: Dict[str, Any] = {}
+        for subject, predicate, obj in rdfGraph:
+            if predicate == RDFNamespace.type:
+                continue
+            name = RDF.Compact(rdfGraph, predicate)
+            predicateOf[name] = predicate
+            adjacency.setdefault(classOf(subject), set()).add((name, classOf(obj)))
+
+        nodesOf: Dict[str, List[Any]] = {}
+        for subject in sorted({s for s in rdfGraph.subjects()}, key=str):
+            nodesOf.setdefault(classOf(subject), []).append(subject)
+
+        # Walk the class graph. A path is recorded only where it cannot be extended, so what
+        # comes back is already free of paths that are the opening of another.
+        candidates: List[Tuple[str, Tuple[Tuple[str, str], ...]]] = []
+
+        def extend(start: str, current: str, path: List[Tuple[str, str]], seen: Set[str]) -> None:
+            options = sorted((p, t) for p, t in adjacency.get(current, ()) if t not in seen)
+            if options and len(path) < maxDepth:
+                for predicate, target in options:
+                    extend(start, target, path + [(predicate, target)], seen | {target})
+                return
+            if len(path) >= 2:
+                candidates.append((start, tuple(path)))
+
+        for startClass in sorted(adjacency):
+            extend(startClass, startClass, [], {startClass})
+
+        # Trim a trailing label hop, which every labelled thing has and SHAPES already lists.
+        # Trimming can leave a path that is the opening of another, so maximality is settled
+        # again here rather than relying on the walk alone.
+        trimmed: Dict[Tuple[str, Tuple[Tuple[str, str], ...]], None] = {}
+        for start, path in candidates:
+            if path[-1][0] == RDF.Compact(rdfGraph, RDFS.label) and path[-1][1].startswith("literal"):
+                path = path[:-1]
+            if len(path) >= 2:
+                trimmed[(start, path)] = None
+
+        paths = [
+            (start, path) for start, path in trimmed
+            if not any(other != path and len(other) > len(path) and other[:len(path)] == path
+                       for otherStart, other in trimmed if otherStart == start)
+        ]
+
+        def cut(text: str) -> str:
+            """Any text an example shows, kept short. A label can be as long as a value."""
+            return repr(text if len(text) <= exampleChars else text[:exampleChars] + "...")
+
+        def show(term: Any) -> str:
+            """A term as it reads in an example: its label where it has one."""
+            if isinstance(term, Literal):
+                return cut(str(term))
+            if isinstance(term, BNode):
+                return "[blank node]"
+            label = rdfGraph.value(term, RDFS.label)
+            # An unlabelled node is shown by the tail of its IRI, and deliberately not as a
+            # usable IRI: examples are there to be read, and ENTITIES is where IRIs come from.
+            return cut(str(label)) if label is not None else f"<...{str(term).rsplit('/', 1)[-1]}>"
+
+        def walkFrom(node: Any, path: Tuple[Tuple[str, str], ...], step: int) -> Optional[List[Any]]:
+            """Follow `path` from `node` through real triples, backtracking on a dead end."""
+            if step == len(path):
+                return []
+            predicate, target = path[step]
+            for obj in sorted(rdfGraph.objects(node, predicateOf[predicate]), key=str):
+                if classOf(obj) != target:
+                    continue
+                tail = walkFrom(obj, path, step + 1)
+                if tail is not None:
+                    return [obj] + tail
+            return None
+
+        chains: List[Dict[str, Any]] = []
+        for start, path in paths:
+            for node in nodesOf.get(start, ()):
+                walked = walkFrom(node, path, 0)
+                if walked is None:
+                    continue
+                template = start + "".join(f" -{p}-> {t}" for p, t in path)
+                example = " -> ".join(show(term) for term in [node] + walked)
+                chains.append({"template": template, "example": example, "hops": len(path)})
+                break
+            # A path no data walks - two classes joined through a third they never meet in -
+            # simply finds no example, and is dropped rather than offered as a route
+
+        # The longest survive the cut, then the list reads shortest first
+        chains.sort(key=lambda c: (-c["hops"], c["template"]))
+        del chains[maxChains:]
+        chains.sort(key=lambda c: (c["hops"], c["template"]))
+        return chains
+
+    @staticmethod
     def SourceNodes(rdfGraph=None, rows: Optional[List[Dict[str, Any]]] = None) -> List[str]:
         """
         The graph nodes an answer rests on.

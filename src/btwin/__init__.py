@@ -2,7 +2,7 @@
 BTWIN - A toolkit for graph-based decision support system prototypes in building management.
 """
 
-__version__ = "0.5.6"
+__version__ = "0.5.7"
 __author__ = "Angelo Massafra"
 
 from .document import Document

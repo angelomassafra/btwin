@@ -116,13 +116,100 @@ New IRIs are the one thing the model invents, because a node being added does no
 update that runs but changes nothing is this cycle's empty SELECT, and gets the same treatment: one
 rewrite, kept only if it actually moves a triple.
 
+### Holding a conversation
+
+The two RDF cycles each take one self-contained prompt and remember nothing. `Cycle.RDFChat`
+puts a conversation on top of them without changing that.
+
+Every turn is routed first. `Tool.ChatRoute` reads the transcript and the new message and
+returns an intent with a **restatement that stands on its own**:
+
+```python
+{"intent": "question", "request": "Which sensors are on the second floor?"}
+```
+
+from a message that was only `and the second floor?`. That restatement is what reaches
+`RDFQueryByPrompt` or `RDFEditByPrompt`, so the cycles stay exactly as they were, and the
+transcript never enters the window where an answer is written from retrieved rows. An intent of
+`talk` — a greeting, or "what did I just ask?" — is answered from the conversation alone and
+touches no graph, so it cannot become a SPARQL query that confidently returns nothing.
+
+`Cycle.RDFChatTurn` is one turn, with no terminal attached: it returns the updated history and
+the caller passes it back for the next one.
+
+```python
+history, schema, chains = [], None, None
+for message in ["Which spaces are on the first floor?", "and on the ground floor?"]:
+    turn = Cycle.RDFChatTurn(graph, message, history=history, schema=schema, chains=chains)
+    history, schema, chains = turn["history"], turn["schema"], turn["chains"]
+    print(turn["request"], "->", turn["answer"])
+```
+
+Nothing is read from a keyboard there, and the graph does not move on its own. An edit runs
+against a copy, and a `confirm` callable decides whether the caller's graph follows:
+
+```python
+turn = Cycle.RDFChatTurn(
+    graph, "add a storage room on the first floor",
+    confirm=lambda proposal: True,          # or show proposal["added"] and ask
+)
+```
+
+Passing no `confirm` proposes the edit without applying it, which is how you see what an
+instruction *would* do. After an applied edit the schema and the chains are rebuilt, because
+both describe the graph as it was and the next question must not be grounded in a graph that
+has moved.
+
+`Cycle.RDFChat` is the same logic as a terminal chat, and the only thing in the module that
+reads a keyboard:
+
+```python
+session = Cycle.RDFChat(graph, savePath="spatialHierarchy_edited.ttl")
+print(session["edits"], session["saved"])
+```
+
+An edit is printed as a triple diff and applied only on `y`. Each one that lands is written to
+`savePath` immediately — `autoSave=True` by default, so a session cannot end with confirmed
+edits lost to a forgotten command. **`savePath` must not be the file the graph was read from**:
+an edit is the model's work, and overwriting the source leaves nothing to compare it against.
+A session that only asks questions writes nothing at all.
+
+Every turn prints the query it ran and what it cost, because the reading that catches a wrong
+answer is the query rather than the sentence; `silent=True` leaves only the answers. The
+commands are `/sparql`, `/history`, `/schema`, `/cost`, `/silent`, `/verbose`, `/save` and
+`/exit`, and Escape leaves too — at the edit confirmation it means no.
+
+### Paths through the graph
+
+`RDFQueryByPrompt` grounds the writer on `RDF.SchemaSummary` **and** [`RDF.Chains`](graph.md),
+rendered by `Tool.RDFChainBlock`. SHAPES gives one hop at a time; chains give the multi-hop
+paths the data actually walks, each with a real example, so the composition is handed over
+instead of guessed — and the example fixes the direction, since "Cucina is located in Piano
+Terra" cannot be read backwards while an arrow between two class names can.
+
+Both are computed for you. Pass them in to reuse them across questions, or pass `chains=[]`
+to ground the writer on the schema alone:
+
+```python
+schema, chains = RDF.SchemaSummary(graph), RDF.Chains(graph)
+for question in questions:
+    result = Cycle.RDFQueryByPrompt(graph, question, schema=schema, chains=chains, meter=meter)
+```
+
+Chains cost tokens: on a small building graph the block roughly doubles the grounding. They
+buy the most where a question needs several hops, or where two different routes join the same
+pair of classes.
+
 Reaching for a single step instead of a whole cycle is a `Tool` call:
 
 ```python
 from btwin import RDF, LLM, Tool, SPARQL
 
 schema = RDF.SchemaSummary(graph)
-sparql = Tool.RDFWriteSPARQL(llm, schema["text"], "How many spaces are there?")
+grounding = schema["text"] + "
+
+" + Tool.RDFChainBlock(RDF.Chains(graph))
+sparql = Tool.RDFWriteSPARQL(llm, grounding, "How many spaces are there?")
 checked, error = SPARQL.Validate(sparql, schema["terms"])
 ```
 

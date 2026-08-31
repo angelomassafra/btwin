@@ -24,8 +24,9 @@ import copy
 import json
 import os
 import re
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 # BTWIN modules
 from .document import Document
@@ -62,6 +63,62 @@ def _StripFences(text: str) -> str:
     if cleaned.lower().startswith("sparql"):
         cleaned = cleaned[len("sparql"):]
     return cleaned.strip()
+
+
+def _ReadLine(prompt: str = "") -> Optional[str]:
+    """
+    Read one line from the console, or None when Escape was pressed.
+
+    input() cannot see Escape. It returns a line only once Enter has been pressed, and the key
+    is not part of one, so noticing it means reading a character at a time - which msvcrt does
+    on Windows. Anywhere else the plain call is exactly right: another platform has no msvcrt,
+    and a stdin that is a pipe rather than a console has no keystrokes to read at all.
+
+    Args:
+        prompt: Written before reading, as input() would.
+
+    Returns:
+        str | None: The line without its newline, or None if Escape ended it. An empty string
+            is a blank line, which is not the same thing.
+
+    Raises:
+        EOFError:          At end of input, including Ctrl-Z on Windows.
+        KeyboardInterrupt: On Ctrl-C, which getwch() returns as a character instead of raising.
+    """
+    try:
+        import msvcrt
+    except ImportError:
+        return input(prompt)
+    if not sys.stdin.isatty():
+        return input(prompt)
+
+    print(prompt, end="", flush=True)
+    typed: List[str] = []
+    while True:
+        char = msvcrt.getwch()
+        if char == "\x1b":               # Escape
+            print()
+            return None
+        if char in ("\r", "\n"):
+            print()
+            return "".join(typed)
+        if char == "\x03":               # Ctrl-C: a character here, not an exception
+            print()
+            raise KeyboardInterrupt
+        if char == "\x1a":               # Ctrl-Z, end of input on Windows
+            print()
+            raise EOFError
+        if char in ("\x00", "\xe0"):     # an arrow or function key: two characters, both dropped
+            msvcrt.getwch()
+            continue
+        if char == "\x08":               # Backspace: erase it on screen as well as in the line
+            if typed:
+                typed.pop()
+                print("\b \b", end="", flush=True)
+            continue
+        typed.append(char)
+        # getwch() does not echo, so what was typed has to be written out to be seen
+        print(char, end="", flush=True)
 
 
 def _SafeUID(text: str, fallback: str = "document") -> str:
@@ -439,6 +496,45 @@ Reply with the query and nothing else: no prose, no explanation, no markdown."""
         "the SHAPES list: check that each predicate really connects those two classes, and that you "
         "have not invented an extra hop between them. Rewrite it to follow the paths in the schema."
     )
+
+    @staticmethod
+    def RDFChainBlock(chains: Optional[List[Dict[str, Any]]] = None) -> str:
+        """
+        Render RDF.Chains as the grounding block that follows the schema.
+
+        SHAPES gives the writer one hop at a time and leaves it to compose them. Composing is
+        where the query goes wrong, in the two ways the note below names, so the paths are
+        handed over already composed and with a worked example against them.
+
+        Args:
+            chains: The output of RDF.Chains.
+
+        Returns:
+            str: The block, or '' when there are no chains - a graph too shallow to have a
+                two-hop path has nothing to add, and an empty heading would only invite the
+                model to invent one.
+
+        Raises:
+            TypeError: If `chains` is not a list.
+        """
+        if chains is None:
+            chains = []
+        if not isinstance(chains, list):
+            raise TypeError("chains must be a list.")
+        if not chains:
+            return ""
+
+        lines = ["GRAPH CHAINS (multi-hop paths the data really walks, one example each)"]
+        for chain in chains:
+            lines.append(f"  {chain['template']}")
+            lines.append(f"    e.g. {chain['example']}")
+        lines.append(
+            "  Read a chain left to right: the subject of each hop is on its left. Reversing a\n"
+            "  hop, or joining two hops into a path that is not listed here, gives a query that\n"
+            "  is still valid, still parses, and still matches nothing.\n"
+            "  The examples name things by label, to be read - take IRIs from ENTITIES."
+        )
+        return "\n".join(lines)
 
     @staticmethod
     def RDFWriteSPARQL(
@@ -1802,6 +1898,197 @@ Reply with the update and nothing else: no prose, no explanation, no markdown.""
         before, after = set(rdfGraph), set(edited)
         return edited, sorted(after - before), sorted(before - after), ""
 
+    # =================================================================================
+    # Tools of cycle 6 - a chat turn into an intent and a request that stands on its own
+    # =================================================================================
+
+    # What a turn may be routed to. 'talk' is the one that touches no graph: it covers
+    # greetings and questions about the conversation itself, which would otherwise be
+    # translated into SPARQL and answered, confidently, with an empty result.
+    CHAT_INTENTS = ("question", "edit", "talk")
+
+    CHAT_ROUTER_PROMPT = """You route the turns of a conversation about a building knowledge graph.
+
+Read the conversation so far and the new message, then reply with ONE JSON object:
+{"intent": "question" | "edit" | "talk", "request": "the message, rewritten to stand alone"}
+
+Choose the intent:
+- "question" - it asks for something the graph records: what, which, how many, where, list.
+- "edit" - it asks to add, rename, change or remove something in the graph.
+- "talk" - anything else: a greeting, thanks, or a question about the conversation itself
+  ("what did I just ask?", "explain that query").
+
+Write the request:
+- Resolve every pronoun and every ellipsis against the conversation, so that someone who has
+  not read it can still act on the request. After a question about the first floor, "and the
+  second one?" becomes "Which sensors are on the second floor?".
+- Change nothing else. Keep the user's wording, their level of detail and their language.
+- For "talk", repeat the message unchanged.
+
+Reply with the JSON object and nothing else: no prose, no explanation, no markdown."""
+
+    CHAT_TALK_PROMPT = """You are the assistant in a conversation about a building knowledge graph.
+
+This turn asked nothing of the graph, so you have no data to answer from - only the conversation.
+
+- Answer from the conversation alone. Never state a fact about the building that is not
+  already in it.
+- If answering would need something only the graph holds, say so and invite the user to ask it.
+- Reply in the user's language. Three sentences at most."""
+
+    @staticmethod
+    def ChatTranscript(
+        history: Optional[List[Dict[str, Any]]] = None,
+        maxTurns: int = 8,
+        answerChars: int = 240,
+    ) -> str:
+        """
+        Render past turns as the text block a chat agent is given to read. No model call.
+
+        Only the last `maxTurns` survive, and each answer is cut to `answerChars`. A
+        conversation otherwise grows without bound, and every turn would be billed the whole
+        history back to the first one.
+
+        The resolved request is shown next to the message it came from, so a chain of
+        follow-ups resolves against what was understood rather than against the ellipsis:
+        two turns after 'and the second one?', the router can still see 'the second floor'.
+
+        Args:
+            history: Turns as recorded by Cycle.RDFChatTurn, each a dict with 'message',
+                'intent', 'request' and 'answer'.
+            maxTurns: How many of the most recent turns to render. 0 or less renders all.
+            answerChars: Where to cut a long answer.
+
+        Returns:
+            str: The transcript, or '(no conversation yet)' when there is none. Never empty:
+                an empty section under a heading reads to a model like a missing one.
+
+        Raises:
+            TypeError: If `history` is not a list.
+        """
+        if history is None:
+            history = []
+        if not isinstance(history, list):
+            raise TypeError("history must be a list.")
+
+        recent = history[-maxTurns:] if maxTurns > 0 else history
+        if not recent:
+            return "(no conversation yet)"
+
+        lines: List[str] = []
+        for number, turn in enumerate(recent, start=len(history) - len(recent) + 1):
+            message = str(turn.get("message") or "").strip()
+            request = str(turn.get("request") or "").strip()
+            intent = str(turn.get("intent") or "").strip()
+            answer = " ".join(str(turn.get("answer") or "").split())
+            if len(answer) > answerChars:
+                answer = answer[:answerChars].rstrip() + "..."
+
+            lines.append(f"[{number}] user: {message}")
+            if request and request != message:
+                lines.append(f"     understood as ({intent}): {request}")
+            lines.append(f"     assistant: {answer or '(no answer)'}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def ChatRoute(
+        llm: "ChatOpenAI",
+        transcript: Optional[str] = None,
+        message: Optional[str] = None,
+        meter: Optional[CostMeter] = None,
+    ) -> Dict[str, str]:
+        """
+        Decide what a chat turn is asking for, and restate it so it stands on its own.
+
+        This is the only place a chat's memory is used. The cycles it feeds -
+        Cycle.RDFQueryByPrompt and Cycle.RDFEditByPrompt - each take one self-contained prompt
+        and know nothing of any conversation, so resolving the ellipsis here leaves them
+        exactly as they are, and keeps the transcript out of the window where an answer is
+        written from retrieved rows.
+
+        Args:
+            llm: A chat model from LLM.Constructor.
+            transcript: The conversation so far, from Tool.ChatTranscript.
+            message: What the user just typed.
+            meter: Optional CostMeter to record tokens and cost into.
+
+        Returns:
+            dict: {'intent': one of Tool.CHAT_INTENTS, 'request': the standalone request}
+
+        Raises:
+            ValueError: If `message` is missing.
+            OSError:    If the provider could not be reached.
+        """
+        if not message or not isinstance(message, str) or not message.strip():
+            raise ValueError("message must be a non-empty string.")
+        transcript = (transcript or "").strip() or "(no conversation yet)"
+
+        reply = LLM.Complete(
+            llm,
+            Tool.CHAT_ROUTER_PROMPT,
+            f"CONVERSATION SO FAR\n{transcript}\n\nNEW MESSAGE\n{message.strip()}",
+            meter,
+            "router",
+        )
+
+        # A router that answers in prose, or invents a fourth intent, must not end the
+        # conversation: the message itself is always a usable request, and 'question' is the
+        # intent that reads the graph without changing it.
+        intent, request = "question", message.strip()
+        try:
+            parsed = json.loads(_ExtractJSON(reply))
+        except (ValueError, TypeError):
+            parsed = {}
+        if isinstance(parsed, dict):
+            candidate = str(parsed.get("intent") or "").strip().lower()
+            if candidate in Tool.CHAT_INTENTS:
+                intent = candidate
+            restated = str(parsed.get("request") or "").strip()
+            if restated:
+                request = restated
+
+        return {"intent": intent, "request": request}
+
+    @staticmethod
+    def ChatReply(
+        llm: "ChatOpenAI",
+        transcript: Optional[str] = None,
+        message: Optional[str] = None,
+        meter: Optional[CostMeter] = None,
+    ) -> str:
+        """
+        Answer a turn that asks nothing of the graph, from the conversation alone.
+
+        The counterpart of Tool.RDFAnswer for the 'talk' intent: there the grounding is the
+        rows a query returned, here it is the transcript, and in neither case may the model
+        add a fact of its own.
+
+        Args:
+            llm: A chat model from LLM.Constructor.
+            transcript: The conversation so far, from Tool.ChatTranscript.
+            message: What the user just typed.
+            meter: Optional CostMeter to record tokens and cost into.
+
+        Returns:
+            str: The reply.
+
+        Raises:
+            ValueError: If `message` is missing.
+            OSError:    If the provider could not be reached.
+        """
+        if not message or not isinstance(message, str) or not message.strip():
+            raise ValueError("message must be a non-empty string.")
+        transcript = (transcript or "").strip() or "(no conversation yet)"
+
+        return LLM.Complete(
+            llm,
+            Tool.CHAT_TALK_PROMPT,
+            f"CONVERSATION SO FAR\n{transcript}\n\nNEW MESSAGE\n{message.strip()}",
+            meter,
+            "talk",
+        )
+
+
 class Cycle():
     """
     Complete agent pipelines, one method each, chaining the steps in Tool.
@@ -1817,6 +2104,7 @@ class Cycle():
         *,
         llm: Optional["ChatOpenAI"] = None,
         schema: Optional[Dict[str, Any]] = None,
+        chains: Optional[List[Dict[str, Any]]] = None,
         meter: Optional[CostMeter] = None,
         maxRepairs: int = 3,
         emptyRetries: int = 1,
@@ -1827,7 +2115,8 @@ class Cycle():
         Answer a natural-language question about an RDF graph, through a hosted LLM.
 
         A Graph-RAG pipeline of five steps, only three of which call a model:
-        1. RDF.Index and 2. RDF.SchemaSummary describe the graph (no model);
+        1. RDF.Index and 2. RDF.SchemaSummary describe the graph, and RDF.Chains spells out the
+           multi-hop paths through it (no model);
         3. Tool.RDFWriteSPARQL turns the question into a query;
         4. SPARQL.Validate checks it, Tool.RDFRepairSPARQL rewrites it when it fails;
         5. RDF.Query runs it (no model), then Tool.RDFAnswer words the result.
@@ -1840,6 +2129,9 @@ class Cycle():
             prompt: The question in natural language.
             llm: A chat model from LLM.Constructor. Built here when not supplied.
             schema: The output of RDF.SchemaSummary, reused across questions when supplied.
+            chains: The output of RDF.Chains, reused across questions when supplied. Computed
+                here when not, and both describe the graph as it is now: pass fresh ones after
+                an edit. Pass [] to ground the writer on the schema alone.
             meter: A CostMeter to tally token usage and cost into.
             maxRepairs: How many times a rejected query may be sent back to be fixed.
             emptyRetries: How many times a valid but empty SELECT is rewritten.
@@ -1869,12 +2161,20 @@ class Cycle():
         llm = llm if llm is not None else LLM.Constructor()
         if schema is None:
             schema = RDF.SchemaSummary(rdfGraph)
+        if chains is None:
+            chains = RDF.Chains(rdfGraph)
         meter = meter if meter is not None else CostMeter()
+
+        # The schema, then the paths through it. Both agents that write a query are given the
+        # same grounding: a repair that could not see the chains would be asked to fix a join
+        # it was never shown the shape of.
+        block = Tool.RDFChainBlock(chains)
+        grounding = f"{schema['text']}\n\n{block}" if block else schema["text"]
 
         # Where this question's calls start, so its cost can be split out of the run total
         first = len(meter.calls)
 
-        sparql = Tool.RDFWriteSPARQL(llm, schema["text"], prompt, meter, rowLimit)
+        sparql = Tool.RDFWriteSPARQL(llm, grounding, prompt, meter, rowLimit)
         if verbose:
             print(f"\n[agent 3] {CostMeter.Describe(meter.calls[-1])}")
             print(f"[agent 3] proposed query:\n{sparql}")
@@ -1891,7 +2191,7 @@ class Cycle():
             if attempts > maxRepairs:
                 raise ValueError(f"No runnable query after {attempts} attempt(s). Last error: {error}")
             previous = sparql
-            sparql = Tool.RDFRepairSPARQL(llm, schema["text"], prompt, sparql, error, meter)
+            sparql = Tool.RDFRepairSPARQL(llm, grounding, prompt, sparql, error, meter)
             if verbose:
                 print(f"[agent 4] {CostMeter.Describe(meter.calls[-1])}")
                 print(f"[agent 4] repaired query:\n{sparql}")
@@ -1920,7 +2220,7 @@ class Cycle():
                 print(f"[agent 4] empty result, asking for a rewrite ({retry + 1}/{emptyRetries})")
 
             candidate = Tool.RDFRepairSPARQL(
-                llm, schema["text"], prompt, sparql, Tool.RDF_EMPTY_RESULT_REASON, meter)
+                llm, grounding, prompt, sparql, Tool.RDF_EMPTY_RESULT_REASON, meter)
             if verbose:
                 print(f"[agent 4] {CostMeter.Describe(meter.calls[-1])}")
 
@@ -2452,4 +2752,439 @@ class Cycle():
             "removed": rendered(removed),
             "attempts": attempts,
             "usage": meter.Total(first),
+        }
+
+    @staticmethod
+    def RDFChatTurn(
+        rdfGraph=None,
+        message: Optional[str] = None,
+        *,
+        history: Optional[List[Dict[str, Any]]] = None,
+        llm: Optional["ChatOpenAI"] = None,
+        schema: Optional[Dict[str, Any]] = None,
+        chains: Optional[List[Dict[str, Any]]] = None,
+        vocabulary: Optional[Dict[str, Any]] = None,
+        meter: Optional[CostMeter] = None,
+        confirm: Optional[Callable[[Dict[str, Any]], bool]] = None,
+        maxTurns: int = 8,
+        maxRepairs: int = 3,
+        emptyRetries: int = 1,
+        rowLimit: int = 100,
+        verbose: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Take one turn of a conversation about an RDF graph.
+
+        The orchestration this and Cycle.RDFChat exist for: Tool.ChatRoute reads the
+        conversation and turns the message into a self-contained request with an intent, and
+        that request goes to Cycle.RDFQueryByPrompt to be answered or Cycle.RDFEditByPrompt to
+        be applied. Neither of those two knows a conversation is happening - the memory is
+        spent entirely on the rewrite, so an answer is still written from retrieved rows and
+        nothing else.
+
+        Nothing is read from or written to a terminal here, and the graph does not move on its
+        own: an edit runs against a copy, and `confirm` decides whether the caller's graph
+        follows. Cycle.RDFChat supplies a `confirm` that prints the diff and asks; another
+        caller can pass `lambda proposal: True` to apply every edit, or leave it None to see
+        what an edit would do without doing it.
+
+        The turn is stateless. `history` is not modified: the returned dict carries a new list
+        with this turn appended, and the caller passes it back for the next one.
+
+        Args:
+            rdfGraph: An rdflib.Graph to answer from and, when an edit is confirmed, to edit.
+            message: What the user just typed, ellipsis and pronouns and all.
+            history: Turns from the previous calls, as returned in 'history'.
+            llm: A chat model from LLM.Constructor. Built here when not supplied.
+            schema: The output of RDF.SchemaSummary. Computed here when not supplied, and
+                recomputed after a confirmed edit - it describes the graph as it was, so the
+                next question would otherwise be grounded in a vocabulary that has moved.
+            chains: The output of RDF.Chains, handled exactly as `schema` is: an edit that adds
+                a relationship adds a path through it, which the next question should see.
+            vocabulary: The output of Tool.JSONLDVocabulary, used by the edit path.
+            meter: A CostMeter to tally token usage and cost into.
+            confirm: Called with the proposed edit before the caller's graph is touched, and
+                the edit is applied only if it returns True. None never applies.
+            maxTurns: How many past turns the router is shown.
+            maxRepairs: How many times a rejected query or update may be sent back.
+            emptyRetries: How many times an empty result or a no-op update is rewritten.
+            rowLimit: Maximum rows a generated SELECT may return.
+            verbose: Print each step's output and cost as it goes.
+
+        Returns:
+            dict: {
+                'answer': str,        # what to show the user
+                'intent': str,        # 'question', 'edit' or 'talk'
+                'request': str,       # the message, restated to stand alone
+                'sparql': str,        # the query or update, '' for a 'talk' turn
+                'rows': list[dict],   # rows retrieved, for a question
+                'source': list[str],  # graph nodes the answer is grounded in
+                'added': list,        # triples an edit proposed adding, as strings
+                'removed': list,      # triples an edit proposed removing
+                'applied': bool,      # whether the edit reached rdfGraph
+                'error': str | None,  # why a question or edit could not be served
+                'history': list,      # `history` with this turn appended
+                'schema': dict,       # the schema to pass to the next turn
+                'chains': list,       # the chains to pass to the next turn
+                'usage': dict,        # tokens and cost for this turn
+            }
+
+        Raises:
+            ImportError: If `rdflib` or `langchain-openai` is not installed.
+            ValueError:  If inputs are missing.
+            OSError:     If the model provider could not be reached. A conversation cannot
+                continue through this, so it is left to reach the caller.
+        """
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+        if not message or not isinstance(message, str) or not message.strip():
+            raise ValueError("message must be a non-empty string.")
+        if history is not None and not isinstance(history, list):
+            raise TypeError("history must be a list.")
+        if confirm is not None and not callable(confirm):
+            raise TypeError("confirm must be callable.")
+
+        history = list(history or [])
+        llm = llm if llm is not None else LLM.Constructor()
+        if schema is None:
+            schema = RDF.SchemaSummary(rdfGraph)
+        if chains is None:
+            chains = RDF.Chains(rdfGraph)
+        meter = meter if meter is not None else CostMeter()
+
+        # Where this turn's calls start, so its cost can be split out of the run total
+        first = len(meter.calls)
+
+        routed = Tool.ChatRoute(
+            llm, Tool.ChatTranscript(history, maxTurns), message, meter)
+        intent, request = routed["intent"], routed["request"]
+        if verbose:
+            print(f"\n[router]  {CostMeter.Describe(meter.calls[-1])}")
+            print(f"[router]  {intent}: {request}")
+
+        answer, sparql, error = "", "", None
+        rows: List[Dict[str, Any]] = []
+        source: List[str] = []
+        added: List[Any] = []
+        removed: List[Any] = []
+        applied = False
+
+        if intent == "talk":
+            answer = Tool.ChatReply(
+                llm, Tool.ChatTranscript(history, maxTurns), message, meter)
+            if verbose:
+                print(f"[talk]    {CostMeter.Describe(meter.calls[-1])}")
+
+        elif intent == "edit":
+            # A rejected update or an unfixable one ends this turn, not the conversation: the
+            # user is told and can rephrase. Only OSError, the model being unreachable, gets
+            # to end the session, and that is left to propagate.
+            try:
+                result = Cycle.RDFEditByPrompt(
+                    rdfGraph, request, llm=llm, schema=schema, vocabulary=vocabulary,
+                    meter=meter, maxRepairs=maxRepairs, emptyRetries=emptyRetries,
+                    inPlace=False, verbose=verbose,
+                )
+            except ValueError as exc:
+                error = str(exc)
+                answer = f"I could not make that change: {exc}"
+            else:
+                sparql, added, removed = result["sparql"], result["added"], result["removed"]
+                if not added and not removed:
+                    answer = ("That change would leave the graph exactly as it is: nothing in "
+                              "it matches what you described.")
+                elif confirm is not None and confirm({
+                    "request": request, "sparql": sparql,
+                    "added": added, "removed": removed,
+                }):
+                    # RDFEditByPrompt renders the diff as compact strings to be read, not as
+                    # triples to be replayed, and it ran against a copy. Diffing the two graphs
+                    # recovers the triples themselves, so the caller's own graph moves rather
+                    # than being swapped for the copy - anything else holding a reference to it
+                    # would otherwise be left looking at the data from before the edit.
+                    edited = result["graph"]
+                    toRemove = set(rdfGraph) - set(edited)
+                    toAdd = set(edited) - set(rdfGraph)
+                    for triple in toRemove:
+                        rdfGraph.remove(triple)
+                    for triple in toAdd:
+                        rdfGraph.add(triple)
+                    applied = True
+                    # The graph has moved, so what describes it is now the old description
+                    schema = RDF.SchemaSummary(rdfGraph)
+                    chains = RDF.Chains(rdfGraph)
+                    answer = (f"Done: {len(added)} triple(s) added, {len(removed)} removed. "
+                              f"The graph now holds {len(rdfGraph)} triples.")
+                else:
+                    answer = ("Left the graph as it was. The change is described above if you "
+                              "want to ask for it differently.")
+
+        else:
+            try:
+                result = Cycle.RDFQueryByPrompt(
+                    rdfGraph, request, llm=llm, schema=schema, chains=chains, meter=meter,
+                    maxRepairs=maxRepairs, emptyRetries=emptyRetries, rowLimit=rowLimit,
+                    verbose=verbose,
+                )
+            except ValueError as exc:
+                error = str(exc)
+                answer = f"I could not answer that: {exc}"
+            else:
+                answer, sparql = result["answer"], result["sparql"]
+                rows, source = result["rows"], result["source"]
+
+        turn = {"message": message.strip(), "intent": intent, "request": request,
+                "answer": answer, "sparql": sparql, "applied": applied}
+
+        return {
+            "answer": answer,
+            "intent": intent,
+            "request": request,
+            "sparql": sparql,
+            "rows": rows,
+            "source": source,
+            "added": added,
+            "removed": removed,
+            "applied": applied,
+            "error": error,
+            "history": history + [turn],
+            "schema": schema,
+            "chains": chains,
+            "usage": meter.Total(first),
+        }
+
+    @staticmethod
+    def RDFChat(
+        rdfGraph=None,
+        *,
+        llm: Optional["ChatOpenAI"] = None,
+        schema: Optional[Dict[str, Any]] = None,
+        chains: Optional[List[Dict[str, Any]]] = None,
+        vocabulary: Optional[Dict[str, Any]] = None,
+        meter: Optional[CostMeter] = None,
+        savePath: Optional[Union[str, Path]] = None,
+        autoSave: bool = True,
+        maxTurns: int = 8,
+        maxRepairs: int = 3,
+        emptyRetries: int = 1,
+        rowLimit: int = 100,
+        silent: bool = False,
+        verbose: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Hold a conversation about an RDF graph at the terminal.
+
+        A loop around Cycle.RDFChatTurn, and the only thing in this module that reads a
+        keyboard: it prints the answers, asks before an edit lands, and keeps the history and
+        the schema threaded from one turn to the next. Everything it knows about buildings it
+        gets from that one call.
+
+        Every turn shows the query it was answered from and what it cost, because the reading
+        that catches a wrong answer here is the query, not the sentence: a backwards triple
+        pattern is valid, cheap and confidently empty. `silent` turns that off for a session
+        that only wants the answers.
+
+        Escape leaves at the prompt, as do /exit, Ctrl-C and end of input. At the confirmation
+        of an edit it means no - refusing a change is not a reason to end the conversation.
+
+        The commands, typed at the prompt:
+
+            /help      what can be typed here
+            /sparql    the query or update behind the last answer
+            /history   the conversation as the router sees it
+            /schema    the grounding block the model is given
+            /cost      what the conversation has cost so far
+            /silent    stop showing the query and the cost of each turn, or show them again
+            /verbose   show each agent's step and cost, or stop showing them
+            /save      write the graph to `savePath` as Turtle, when autoSave has not
+            /exit      leave, /quit does the same
+
+        Args:
+            rdfGraph: An rdflib.Graph to talk about. Confirmed edits are applied to it.
+            llm: A chat model from LLM.Constructor. Built here when not supplied.
+            schema: The output of RDF.SchemaSummary. Computed here when not supplied, and kept
+                current across edits.
+            chains: The output of RDF.Chains, kept current the same way.
+            vocabulary: The output of Tool.JSONLDVocabulary, used by the edit path. Built once
+                here, since an edit turn would otherwise rebuild it every time.
+            meter: A CostMeter to tally token usage and cost into.
+            savePath: Where the edited graph is written. This must not be the file the graph
+                was read from: an edit is the model's work, and overwriting the source would
+                leave nothing to compare it against. Without a path, nothing is ever written
+                and an edited graph lives only as long as the session.
+            autoSave: Write `savePath` as soon as an edit is applied, rather than waiting for
+                /save. On by default, so a session cannot end with confirmed edits lost to a
+                forgotten command. The file is written only once an edit lands, so a session
+                that only asks questions leaves nothing behind.
+            maxTurns: How many past turns the router is shown.
+            maxRepairs: How many times a rejected query or update may be sent back.
+            emptyRetries: How many times an empty result or a no-op update is rewritten.
+            rowLimit: Maximum rows a generated SELECT may return.
+            silent: Print the answers and nothing else - no query behind each turn, no running
+                cost, no closing total. /silent toggles it.
+            verbose: Start with the per-agent narration on. /verbose toggles it.
+
+        Returns:
+            dict: {
+                'history': list,   # every turn taken
+                'graph': Graph,    # the graph, edited in place where edits were confirmed
+                'schema': dict,    # the schema as it stands at the end
+                'chains': list,    # the chains as they stand at the end
+                'edits': int,      # how many edits were applied
+                'saved': bool,     # whether the graph on disk matches the graph in memory
+                'usage': dict,     # tokens and cost for the whole conversation
+            }
+
+        Raises:
+            ImportError: If `rdflib` or `langchain-openai` is not installed.
+            ValueError:  If `rdfGraph` is missing.
+        """
+        if rdfGraph is None:
+            raise ValueError("rdfGraph must be provided.")
+
+        llm = llm if llm is not None else LLM.Constructor()
+        if schema is None:
+            schema = RDF.SchemaSummary(rdfGraph)
+        if chains is None:
+            chains = RDF.Chains(rdfGraph)
+        vocabulary = vocabulary if vocabulary is not None else Tool.JSONLDVocabulary()
+        meter = meter if meter is not None else CostMeter()
+
+        history: List[Dict[str, Any]] = []
+        lastResult: Optional[Dict[str, Any]] = None
+        edits, unsaved = 0, False
+
+        def confirm(proposal: Dict[str, Any]) -> bool:
+            """Show the diff and ask. A model-written update is not applied unseen."""
+            print("\n  the change it proposes:")
+            for triple in proposal["removed"]:
+                print(f"    - {' '.join(triple)}")
+            for triple in proposal["added"]:
+                print(f"    + {' '.join(triple)}")
+            try:
+                reply = _ReadLine("  apply? [y/N] ")
+            except (EOFError, KeyboardInterrupt):
+                # Ctrl-C at the confirmation refuses the edit; it does not end the session
+                print()
+                return False
+            # Escape here is the same answer as anything that is not yes: leave the graph alone
+            return reply is not None and reply.strip().lower() in ("y", "yes")
+
+        print(f"\nChatting about a graph of {len(rdfGraph)} triples, via {llm.model_name}.")
+        print("Ask a question, or describe a change. /help for commands, Esc or /exit to leave.\n")
+
+        while True:
+            try:
+                line = _ReadLine("you> ")
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
+            if line is None:            # Escape
+                break
+            message = line.strip()
+            if not message:
+                continue
+
+            if message.startswith("/"):
+                command = message.split()[0].lower()
+                if command in ("/exit", "/quit"):
+                    break
+                elif command == "/help":
+                    print("  /sparql  /history  /schema  /cost  /silent  /verbose  /save  /exit")
+                    print("  Esc leaves too, and answers no to an edit.")
+                elif command == "/sparql":
+                    print(f"\n{lastResult['sparql'] or '(no query behind that answer)'}\n"
+                          if lastResult else "  nothing asked yet")
+                elif command == "/history":
+                    print(f"\n{Tool.ChatTranscript(history, maxTurns)}\n")
+                elif command == "/schema":
+                    print(f"\n{schema['text']}\n")
+                    print(f"{Tool.RDFChainBlock(chains) or '(no multi-hop chains)'}\n")
+                elif command == "/cost":
+                    total = meter.Total()
+                    print(f"  {total['calls']} call(s), {CostMeter.Describe(total)}")
+                elif command == "/silent":
+                    silent = not silent
+                    print(f"  silent {'on' if silent else 'off'}")
+                elif command == "/verbose":
+                    verbose = not verbose
+                    print(f"  verbose {'on' if verbose else 'off'}")
+                elif command == "/save":
+                    if savePath is None:
+                        print("  no savePath was given, so there is nowhere to write")
+                    else:
+                        rdfGraph.serialize(destination=str(savePath), format="turtle")
+                        unsaved = False
+                        print(f"  written to {savePath}")
+                else:
+                    print(f"  no such command: {command}. /help lists them.")
+                continue
+
+            try:
+                lastResult = Cycle.RDFChatTurn(
+                    rdfGraph, message, history=history, llm=llm, schema=schema, chains=chains,
+                    vocabulary=vocabulary, meter=meter, confirm=confirm, maxTurns=maxTurns,
+                    maxRepairs=maxRepairs, emptyRetries=emptyRetries, rowLimit=rowLimit,
+                    verbose=verbose,
+                )
+            except OSError as exc:
+                # The remote model is unreachable: every following turn would fail the same way
+                print(f"\n{exc}\n")
+                break
+
+            history, schema = lastResult["history"], lastResult["schema"]
+            chains = lastResult["chains"]
+            saveNote = ""
+            if lastResult["applied"]:
+                edits, unsaved = edits + 1, True
+                if autoSave and savePath is not None:
+                    try:
+                        rdfGraph.serialize(destination=str(savePath), format="turtle")
+                        unsaved = False
+                        saveNote = f"     saved to {Path(savePath).name}"
+                    except OSError as exc:
+                        # A file open elsewhere, or a read-only folder. The edit is still in
+                        # the graph, so the session goes on and /save can be tried again.
+                        saveNote = f"     could not write {Path(savePath).name}: {exc}"
+
+            print(f"\nbot> {lastResult['answer']}")
+            if saveNote:
+                print(saveNote)
+            if not silent and lastResult["sparql"]:
+                # The answer reads the same whether the query was right or backwards, so the
+                # query is the part worth putting in front of the user by default
+                label = "update" if lastResult["intent"] == "edit" else "query"
+                print(f"\n     the {label} it ran:")
+                for line in lastResult["sparql"].splitlines():
+                    print(f"       {line}")
+            if verbose and lastResult["source"]:
+                print(f"     grounded in {len(lastResult['source'])} node(s): "
+                      f"{', '.join(lastResult['source'][:5])}")
+            if not silent:
+                running = meter.Total()
+                print(f"\n     this turn: {lastResult['usage']['calls']} call(s), "
+                      f"{CostMeter.Describe(lastResult['usage'])}")
+                print(f"     so far:    {running['calls']} call(s), "
+                      f"{CostMeter.Describe(running)}")
+            print()
+
+        if unsaved:
+            print(f"{edits} edit(s) are in memory only. /save writes them" +
+                  (f" to {savePath}." if savePath else ", once a savePath is given."))
+        elif edits:
+            print(f"{edits} edit(s) written to {savePath}.")
+
+        total = meter.Total()
+        if not silent:
+            print(f"\nConversation: {len(history)} turn(s), {total['calls']} call(s), "
+                  f"{CostMeter.Describe(total)}")
+
+        return {
+            "history": history,
+            "graph": rdfGraph,
+            "schema": schema,
+            "chains": chains,
+            "edits": edits,
+            "saved": not unsaved,
+            "usage": total,
         }

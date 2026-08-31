@@ -10,12 +10,13 @@ correctly on GitHub without being run.
 | 01 | [`create-a-btwin-graph`](01-create-a-btwin-graph/create-a-btwin-graph.ipynb) | Builds one small building graph from synthetic data — spatial hierarchy, property sets, sensors, a KPI set and documents — serializes it to JSON-LD, queries it, and draws it. No LLM. |
 | 02 | [`graph-formats`](02-graph-formats/graph-formats.ipynb) | Moves that graph between JSON-LD, NetworkX, RDF/SPARQL and Neo4j, and measures what each hop keeps or drops. |
 | 03 | [`llm-in-action`](03-llm-in-action/llm-in-action.ipynb) | Builds a graph from an English prompt and queries it in English, via `Cycle`. Shows the validate-and-repair loop, what it catches, and — importantly — what it does not. |
+| 04 | [`chat-with-llm`](04-chat-with-llm/chat-with-llm.ipynb) | Turns those one-shot cycles into a conversation: a follow-up that resolves against what was already said, an edit shown before it lands, and where the edited graph is written. |
 
-00 is a reference; 01 to 03 are a narrative. Read 00 when you want to look something up, and 01
+00 is a reference; 01 to 04 are a narrative. Read 00 when you want to look something up, and 01
 onward when you want to see a whole graph built and used.
 
-Each folder is self-contained: 02 ships its own copy of 01's JSON-LD in `input/`, and 03 generates
-everything it needs. You can run any of them on its own, in any order.
+Each folder is self-contained: 02 ships its own copy of 01's JSON-LD in `input/`, and 03 and 04
+generate everything they need. You can run any of them on its own, in any order.
 
 ## Step-by-step graph views
 
@@ -29,6 +30,9 @@ Watching the node count climb is the quickest way to see what each section actua
 - **01** — 8 nodes (spatial) → 12 (property sets) → 19 (sensors) → 22 (complete) → 18 (flattened)
 - **02** — the same 22 nodes through each conversion, then 18 once property sets are folded in
 - **03** — 11 nodes written by the model → 13 after the JSON-LD edit → 14 after the RDF edit
+
+04 writes Turtle rather than HTML pages: `riverside.ttl` as built, and `riverside_edited.ttl`
+after the chat's edit, so the two can be diffed.
 
 ## Running them
 
@@ -49,6 +53,10 @@ Run each notebook **from inside its own folder**, since the paths are relative t
 - **03** — `btwin[llm]` and `OPENROUTER_API_KEY`, and **every run is billed to your key**. On the
   default model (`google/gemini-2.5-flash-lite`) a full pass is about $0.003; the notebook prints
   its own `CostMeter` total at the end. Its outputs will not reproduce exactly.
+- **04** — `btwin[llm,rdf]` and `OPENROUTER_API_KEY`, billed the same way; the committed run cost
+  $0.0015 over 17 calls. It builds its own graph with no model, so only the conversation is paid
+  for. `Cycle.RDFChat`, the terminal chat, blocks on input and so is
+  described rather than run, with the few lines that wire it to a graph on disk.
 
 ## Generated files
 
