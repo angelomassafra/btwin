@@ -17,6 +17,9 @@
 
 <https://example.org/officeblocka/kpiset-2026Q1> a btwin:KPISet ;
     rdfs:label "Energy & comfort, 2026 Q1" ;
+    btwin:hasKPIs <https://example.org/officeblocka/kpi-co2>,
+        <https://example.org/officeblocka/kpi-comfort>,
+        <https://example.org/officeblocka/kpi-eui> ;
     eko:hasAssociatedObject <https://example.org/officeblocka/bld-01> ;
     eko:hasEvaluationTimestep [ a time1:interval ;
             time1:hasBeginning "2026-01-01T00:00:00Z" ;
@@ -55,6 +58,21 @@
     brick:hasLocation <https://example.org/officeblocka/storey-01> ;
     ifc:HasPropertySets <https://example.org/officeblocka/pset-space-04> .
 
+<https://example.org/officeblocka/kpi-co2> a eko:KPI ;
+    rdfs:label "Mean CO2 concentration" ;
+    ifc:NominalValue 7.42e+02 ;
+    ifc:Unit "ppm" .
+
+<https://example.org/officeblocka/kpi-comfort> a eko:KPI ;
+    rdfs:label "Hours within comfort band" ;
+    ifc:NominalValue 1683 ;
+    ifc:Unit "h" .
+
+<https://example.org/officeblocka/kpi-eui> a eko:KPI ;
+    rdfs:label "Energy use intensity" ;
+    ifc:NominalValue 3.14e+01 ;
+    ifc:Unit "kWh/sqm" .
+
 <https://example.org/officeblocka/pset-space-01> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
@@ -78,22 +96,22 @@
 <https://example.org/officeblocka/pset-space-03> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "office" ],
+        [ a ifc:IfcPropertySingleValue ;
             rdfs:label "netFloorArea" ;
             ifc:NominalValue 9.6e+01 ;
-            ifc:Unit "sqm" ],
-        [ a ifc:IfcPropertySingleValue ;
-            rdfs:label "occupancyType" ;
-            ifc:NominalValue "office" ] .
+            ifc:Unit "sqm" ] .
 
 <https://example.org/officeblocka/pset-space-04> a ifc:IfcPropertySet ;
     rdfs:label "Pset_SpaceCommon" ;
     ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
-            rdfs:label "occupancyType" ;
-            ifc:NominalValue "circulation" ],
-        [ a ifc:IfcPropertySingleValue ;
             rdfs:label "netFloorArea" ;
             ifc:NominalValue 1.8e+01 ;
-            ifc:Unit "sqm" ] .
+            ifc:Unit "sqm" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "occupancyType" ;
+            ifc:NominalValue "circulation" ] .
 
 <https://example.org/officeblocka/space-01> a bot:Space ;
     rdfs:label "Reception" ;

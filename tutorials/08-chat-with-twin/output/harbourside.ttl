@@ -1,0 +1,440 @@
+@prefix bot: <https://w3id.org/bot#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix btwin: <btwin#> .
+@prefix ifc: <https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/harbourside/B1-F0-S01> a bot:Space ;
+    rdfs:label "Reading Room" ;
+    brick:hasLocation <https://example.org/harbourside/B1-F0> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B1-F0-S01-PSET> .
+
+<https://example.org/harbourside/B1-F0-S02> a bot:Space ;
+    rdfs:label "Stacks" ;
+    brick:hasLocation <https://example.org/harbourside/B1-F0> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B1-F0-S02-PSET> .
+
+<https://example.org/harbourside/B1-F1-S01> a bot:Space ;
+    rdfs:label "Study Carrels" ;
+    brick:hasLocation <https://example.org/harbourside/B1-F1> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B1-F1-S01-PSET> .
+
+<https://example.org/harbourside/B1-F1-S02> a bot:Space ;
+    rdfs:label "Quiet Room" ;
+    brick:hasLocation <https://example.org/harbourside/B1-F1> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B1-F1-S02-PSET> .
+
+<https://example.org/harbourside/B2-F0-S01> a bot:Space ;
+    rdfs:label "Prep Room" ;
+    brick:hasLocation <https://example.org/harbourside/B2-F0> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B2-F0-S01-PSET> .
+
+<https://example.org/harbourside/B2-F0-S02> a bot:Space ;
+    rdfs:label "Store" ;
+    brick:hasLocation <https://example.org/harbourside/B2-F0> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B2-F0-S02-PSET> .
+
+<https://example.org/harbourside/B2-F1-S01> a bot:Space ;
+    rdfs:label "Wet Lab A" ;
+    brick:hasLocation <https://example.org/harbourside/B2-F1> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B2-F1-S01-PSET> .
+
+<https://example.org/harbourside/B2-F1-S02> a bot:Space ;
+    rdfs:label "Wet Lab B" ;
+    brick:hasLocation <https://example.org/harbourside/B2-F1> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B2-F1-S02-PSET> .
+
+<https://example.org/harbourside/B3-F0-S01> a bot:Space ;
+    rdfs:label "Main Hall" ;
+    brick:hasLocation <https://example.org/harbourside/B3-F0> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B3-F0-S01-PSET> .
+
+<https://example.org/harbourside/B3-F0-S02> a bot:Space ;
+    rdfs:label "Changing Rooms" ;
+    brick:hasLocation <https://example.org/harbourside/B3-F0> ;
+    ifc:HasPropertySets <https://example.org/harbourside/B3-F0-S02-PSET> .
+
+<https://example.org/harbourside/B1-F0-S01-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 3.6e+00 ;
+            ifc:Unit "m" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 90 ;
+            ifc:Unit "people" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 2.6e+02 ;
+            ifc:Unit "m2" ] .
+
+<https://example.org/harbourside/B1-F0-S02-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 1.8e+02 ;
+            ifc:Unit "m2" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 3e+00 ;
+            ifc:Unit "m" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 6 ;
+            ifc:Unit "people" ] .
+
+<https://example.org/harbourside/B1-F1-S01-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 2.6e+02 ;
+            ifc:Unit "m2" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 90 ;
+            ifc:Unit "people" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 3.6e+00 ;
+            ifc:Unit "m" ] .
+
+<https://example.org/harbourside/B1-F1-S02-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 3.6e+00 ;
+            ifc:Unit "m" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 90 ;
+            ifc:Unit "people" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 2.6e+02 ;
+            ifc:Unit "m2" ] .
+
+<https://example.org/harbourside/B1-electricity-db> a btwin:Document ;
+    rdfs:label "Library - electricity readings 2025" ;
+    ifc:HasPropertySets <https://example.org/harbourside/B1-electricity-db-PSET> .
+
+<https://example.org/harbourside/B1-electricity-db-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Database Location" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ObservedProperty" ;
+            ifc:NominalValue "ElectricityConsumption" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "Unit" ;
+            ifc:NominalValue "kWh" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "TableName" ;
+            ifc:NominalValue "observations" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "SensorID" ;
+            ifc:NominalValue "HB-B1-EM" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "RowCount" ;
+            ifc:NominalValue 12 ;
+            ifc:Unit "rows" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodStart" ;
+            ifc:NominalValue "2025-01-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "FilePath" ;
+            ifc:NominalValue "output/databases/HB-B1-electricity.db" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodEnd" ;
+            ifc:NominalValue "2025-12-01T00:00:00Z" ] .
+
+<https://example.org/harbourside/B1-water-db> a btwin:Document ;
+    rdfs:label "Library - water readings 2025" ;
+    ifc:HasPropertySets <https://example.org/harbourside/B1-water-db-PSET> .
+
+<https://example.org/harbourside/B1-water-db-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Database Location" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "RowCount" ;
+            ifc:NominalValue 12 ;
+            ifc:Unit "rows" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "TableName" ;
+            ifc:NominalValue "observations" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ObservedProperty" ;
+            ifc:NominalValue "WaterConsumption" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "SensorID" ;
+            ifc:NominalValue "HB-B1-WM" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodEnd" ;
+            ifc:NominalValue "2025-12-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "Unit" ;
+            ifc:NominalValue "m3" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "FilePath" ;
+            ifc:NominalValue "output/databases/HB-B1-water.db" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodStart" ;
+            ifc:NominalValue "2025-01-01T00:00:00Z" ] .
+
+<https://example.org/harbourside/B2-F0-S01-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 4.5e+01 ;
+            ifc:Unit "m2" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 4 ;
+            ifc:Unit "people" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 2.7e+00 ;
+            ifc:Unit "m" ] .
+
+<https://example.org/harbourside/B2-F0-S02-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 1.8e+02 ;
+            ifc:Unit "m2" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 6 ;
+            ifc:Unit "people" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 3e+00 ;
+            ifc:Unit "m" ] .
+
+<https://example.org/harbourside/B2-F1-S01-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 18 ;
+            ifc:Unit "people" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 1.4e+02 ;
+            ifc:Unit "m2" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 3.4e+00 ;
+            ifc:Unit "m" ] .
+
+<https://example.org/harbourside/B2-F1-S02-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 3.4e+00 ;
+            ifc:Unit "m" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 1.4e+02 ;
+            ifc:Unit "m2" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 18 ;
+            ifc:Unit "people" ] .
+
+<https://example.org/harbourside/B2-electricity-db> a btwin:Document ;
+    rdfs:label "Science Block - electricity readings 2025" ;
+    ifc:HasPropertySets <https://example.org/harbourside/B2-electricity-db-PSET> .
+
+<https://example.org/harbourside/B2-electricity-db-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Database Location" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "SensorID" ;
+            ifc:NominalValue "HB-B2-EM" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ObservedProperty" ;
+            ifc:NominalValue "ElectricityConsumption" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "FilePath" ;
+            ifc:NominalValue "output/databases/HB-B2-electricity.db" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodStart" ;
+            ifc:NominalValue "2025-01-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "RowCount" ;
+            ifc:NominalValue 12 ;
+            ifc:Unit "rows" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "Unit" ;
+            ifc:NominalValue "kWh" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodEnd" ;
+            ifc:NominalValue "2025-12-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "TableName" ;
+            ifc:NominalValue "observations" ] .
+
+<https://example.org/harbourside/B2-water-db> a btwin:Document ;
+    rdfs:label "Science Block - water readings 2025" ;
+    ifc:HasPropertySets <https://example.org/harbourside/B2-water-db-PSET> .
+
+<https://example.org/harbourside/B2-water-db-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Database Location" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "TableName" ;
+            ifc:NominalValue "observations" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ObservedProperty" ;
+            ifc:NominalValue "WaterConsumption" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "SensorID" ;
+            ifc:NominalValue "HB-B2-WM" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "RowCount" ;
+            ifc:NominalValue 12 ;
+            ifc:Unit "rows" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodStart" ;
+            ifc:NominalValue "2025-01-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodEnd" ;
+            ifc:NominalValue "2025-12-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "FilePath" ;
+            ifc:NominalValue "output/databases/HB-B2-water.db" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "Unit" ;
+            ifc:NominalValue "m3" ] .
+
+<https://example.org/harbourside/B3> a bot:Building ;
+    rdfs:label "Sports Hall" ;
+    btwin:hasDocument <https://example.org/harbourside/B3-electricity-db>,
+        <https://example.org/harbourside/B3-water-db> ;
+    brick:hasLocation <https://example.org/harbourside/site> .
+
+<https://example.org/harbourside/B3-F0-S01-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 8.6e+02 ;
+            ifc:Unit "m2" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 8e+00 ;
+            ifc:Unit "m" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 300 ;
+            ifc:Unit "people" ] .
+
+<https://example.org/harbourside/B3-F0-S02-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Space Quantities" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "OccupantCount" ;
+            ifc:NominalValue 4 ;
+            ifc:Unit "people" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ClearHeight" ;
+            ifc:NominalValue 2.7e+00 ;
+            ifc:Unit "m" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "NetFloorArea" ;
+            ifc:NominalValue 4.5e+01 ;
+            ifc:Unit "m2" ] .
+
+<https://example.org/harbourside/B3-electricity-db> a btwin:Document ;
+    rdfs:label "Sports Hall - electricity readings 2025" ;
+    ifc:HasPropertySets <https://example.org/harbourside/B3-electricity-db-PSET> .
+
+<https://example.org/harbourside/B3-electricity-db-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Database Location" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodEnd" ;
+            ifc:NominalValue "2025-12-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "FilePath" ;
+            ifc:NominalValue "output/databases/HB-B3-electricity.db" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ObservedProperty" ;
+            ifc:NominalValue "ElectricityConsumption" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "TableName" ;
+            ifc:NominalValue "observations" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "RowCount" ;
+            ifc:NominalValue 12 ;
+            ifc:Unit "rows" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodStart" ;
+            ifc:NominalValue "2025-01-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "SensorID" ;
+            ifc:NominalValue "HB-B3-EM" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "Unit" ;
+            ifc:NominalValue "kWh" ] .
+
+<https://example.org/harbourside/B3-water-db> a btwin:Document ;
+    rdfs:label "Sports Hall - water readings 2025" ;
+    ifc:HasPropertySets <https://example.org/harbourside/B3-water-db-PSET> .
+
+<https://example.org/harbourside/B3-water-db-PSET> a ifc:IfcPropertySet ;
+    rdfs:label "Database Location" ;
+    ifc:HasProperties [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "TableName" ;
+            ifc:NominalValue "observations" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "ObservedProperty" ;
+            ifc:NominalValue "WaterConsumption" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "FilePath" ;
+            ifc:NominalValue "output/databases/HB-B3-water.db" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodStart" ;
+            ifc:NominalValue "2025-01-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "RowCount" ;
+            ifc:NominalValue 12 ;
+            ifc:Unit "rows" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "PeriodEnd" ;
+            ifc:NominalValue "2025-12-01T00:00:00Z" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "SensorID" ;
+            ifc:NominalValue "HB-B3-WM" ],
+        [ a ifc:IfcPropertySingleValue ;
+            rdfs:label "Unit" ;
+            ifc:NominalValue "m3" ] .
+
+<https://example.org/harbourside/B1> a bot:Building ;
+    rdfs:label "Library" ;
+    btwin:hasDocument <https://example.org/harbourside/B1-electricity-db>,
+        <https://example.org/harbourside/B1-water-db> ;
+    brick:hasLocation <https://example.org/harbourside/site> .
+
+<https://example.org/harbourside/B1-F0> a bot:Storey ;
+    rdfs:label "Library - Ground Floor" ;
+    brick:hasLocation <https://example.org/harbourside/B1> .
+
+<https://example.org/harbourside/B1-F1> a bot:Storey ;
+    rdfs:label "Library - First Floor" ;
+    brick:hasLocation <https://example.org/harbourside/B1> .
+
+<https://example.org/harbourside/B2> a bot:Building ;
+    rdfs:label "Science Block" ;
+    btwin:hasDocument <https://example.org/harbourside/B2-electricity-db>,
+        <https://example.org/harbourside/B2-water-db> ;
+    brick:hasLocation <https://example.org/harbourside/site> .
+
+<https://example.org/harbourside/B2-F0> a bot:Storey ;
+    rdfs:label "Science Block - Ground Floor" ;
+    brick:hasLocation <https://example.org/harbourside/B2> .
+
+<https://example.org/harbourside/B2-F1> a bot:Storey ;
+    rdfs:label "Science Block - First Floor" ;
+    brick:hasLocation <https://example.org/harbourside/B2> .
+
+<https://example.org/harbourside/B3-F0> a bot:Storey ;
+    rdfs:label "Sports Hall - Ground Floor" ;
+    brick:hasLocation <https://example.org/harbourside/B3> .
+
+<https://example.org/harbourside/site> a bot:Site ;
+    rdfs:label "Harbourside Campus" .
+

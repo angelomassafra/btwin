@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "btwin"
-version = "0.5.7"
+version = "0.5.8"
 description = "A toolkit for graph-based decision support system prototypes in building management"
 readme = "README.md"
 license = "PolyForm-Noncommercial-1.0.0"

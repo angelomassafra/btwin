@@ -572,6 +572,19 @@ class GraphPlot():
         if not isinstance(relaxSteps, int) or relaxSteps < 0:
             raise ValueError("`relaxSteps` must be a non-negative integer.")
 
+        # A single colour string is the one wrong argument that fails silently: tuple() takes
+        # it apart character by character, every character is an invalid CSS colour, and the
+        # page renders every node black with no error anywhere. Color.Purple() and its
+        # siblings return exactly that - one colour, for the matplotlib and plotly renderers -
+        # so the mistake is an easy one to make.
+        if isinstance(palette, str):
+            raise ValueError(
+                "`palette` must be a sequence of colours, not one colour string: a str is "
+                "iterated character by character and every node would render black. Pass a "
+                "tuple such as ('#4E79A7', '#F28E2B'), or None for the default. Note that "
+                "Color.Purple() and its siblings return a single colour for the matplotlib "
+                "and plotly renderers, not a categorical palette for this one.")
+
         # None means "use the default"; an empty palette is a request for no colours at all,
         # which cannot be honoured, so it is an error rather than a silent fallback.
         colors = GraphPlot.CATEGORICAL_PALETTE if palette is None else tuple(palette)

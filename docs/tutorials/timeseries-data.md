@@ -132,3 +132,19 @@ You now have:
 - 72 observation records (24 hours x 3 sensors) in SQLite
 - Queries filtering by sensor, time range, and observed property
 - Aggregations by hour, day, or month with min/max/mean/sum/count
+
+## Next: letting something else write the SQL
+
+Everything above is the typed API — you say which sensor, which aggregate, which period, and BTwin
+builds the query. `Observation` also carries the pieces needed to hand that job to an LLM without
+handing it the database:
+
+- `Observation.SQLiteIndex` and `SQLiteSchemaSummary` describe the table, including the complete
+  set of literals each string column actually contains.
+- `SQL.Validate` compiles a generated query through `EXPLAIN` before it runs, so a hallucinated
+  column is refused by name rather than returning zero rows.
+- `Observation.SQLiteApplyUpdate` runs a write inside a transaction and rolls it back, so the
+  change can be read before it is committed.
+
+See [Points & Observations](../user-guide/points-observations.md) for the API, and notebooks
+`05-timeseries-management` and `06-chat-with-timeseries` in the repository for worked examples.

@@ -109,7 +109,7 @@ can be read on GitHub without running anything.
 | 01 | [Create a BTwin graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/01-create-a-btwin-graph/create-a-btwin-graph.ipynb) | Builds a two-storey office from synthetic data — spatial hierarchy, property sets, sensors, a KPI set, documents — then serializes, queries and draws it. No LLM. |
 | 02 | [Move a graph between formats](https://github.com/angelomassafra/btwin/blob/main/tutorials/02-graph-formats/graph-formats.ipynb) | JSON-LD, NetworkX, RDF/SPARQL and Neo4j, and a measured account of what each conversion keeps or drops. |
 | 03 | [LLM in action](https://github.com/angelomassafra/btwin/blob/main/tutorials/03-llm-in-action/llm-in-action.ipynb) | Builds a graph from an English prompt and queries it in English. Requires an API key and bills your account. |
-| 04 | [Chat with an LLM](https://github.com/angelomassafra/btwin/blob/main/tutorials/04-chat-with-llm/chat-with-llm.ipynb) | Holds a conversation with a graph: follow-up questions that resolve against what was already said, and edits confirmed before they land. Requires an API key. |
+| 04 | [Chat with a graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/04-chat-with-graph/chat-with-graph.ipynb) | Holds a conversation with a graph: follow-up questions that resolve against what was already said, and edits confirmed before they land. Requires an API key. |
 
 00 is a reference to look things up in; 01 to 04 are a narrative that builds one graph and puts it
 to work. Tutorials 01 to 03 write a self-contained interactive HTML page after every stage into
@@ -144,10 +144,14 @@ The design principle is that **the model is never trusted to know the ontologies
 | `Cycle.JSONLDCreateByPrompt` | English description → a validated BTwin graph |
 | `Cycle.JSONLDEditByPrompt` | English request → a validated patch applied to a document |
 | `Cycle.RDFQueryByPrompt` | English question → SPARQL → rows → an English answer |
+| `Cycle.SQLiteQueryByPrompt` | English question → SQL → rows → an English answer, over a table of observations |
 | `Cycle.RDFEditByPrompt` | English request → a validated SPARQL `UPDATE` |
+| `Cycle.SQLiteEditByPrompt` | English request → a validated SQL write, rehearsed before it is committed |
 | `Cycle.DocumentCreateByPrompt` | A PDF → an inferred `Document` node with its property set |
 | `Cycle.RDFChatTurn` | One conversation turn: route it, then answer or edit |
 | `Cycle.RDFChat` | The same, as a terminal chat that keeps its own history |
+| `Cycle.SQLiteChatTurn` | One conversation turn over a table: route it, then answer or edit |
+| `Cycle.SQLiteChat` | The same, as a terminal chat that keeps its own history |
 
 `Tool` exposes the individual agents if you would rather drive the pipeline yourself, and
 `CostMeter` records tokens and cost for every call so a run's price is never a surprise.

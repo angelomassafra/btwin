@@ -4,13 +4,20 @@ BTWIN - A toolkit for graph-based decision support system prototypes in building
 POINT MODULE
 This module defines the functions to model and query points and timeseries via the BTWIN toolkit.
 
+Point builds the sensor nodes; Observation moves timeseries in and out of SQLite and describes
+what a table holds, which is what grounds a model writing SQL against it; SQL is the validator
+that stands between a generated query and the database, the counterpart of SPARQL in graph.py.
+
 © Angelo Massafra, 2026
 """
 
 # Dependencies
 import os
+import re
 import sqlite3
-from typing import Any, Dict, Iterable, List, Optional, Union
+from collections import Counter
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import pandas as pd
 
@@ -782,3 +789,728 @@ class Observation():
                 raise OSError(f"Failed to save template to '{savePath}'.") from exc
 
         return df
+
+    # =================================================================================
+    # Grounding an LLM on a table: what is in it, how to read it, and what an answer rests on
+    # =================================================================================
+
+    @staticmethod
+    def SQLiteFetch(
+        sqlitePath: Optional[str] = None,
+        sql: Optional[str] = None,
+        params: Optional[Union[List[Any], Tuple[Any, ...]]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Run a read-only SQL query and return its rows as plain dictionaries.
+
+        The connection is opened in SQLite's read-only mode, so a statement that slipped past
+        SQL.Validate still cannot change the file. Values keep their SQLite types: a REAL
+        comes back as a float, not as the string an RDF binding would give.
+
+        Args:
+            sqlitePath: Path to the SQLite database file.
+            sql: The SQL text to run.
+            params: Optional bound parameters for '?' placeholders.
+
+        Returns:
+            list[dict]: One dict per row, mapping column name (or alias) to its value.
+
+        Raises:
+            ValueError:            If inputs are missing, or the database file is not there.
+            sqlite3.DatabaseError: If the query does not run.
+        """
+        if not sqlitePath or not isinstance(sqlitePath, str):
+            raise ValueError("sqlitePath must be a non-empty string path.")
+        if not sql or not isinstance(sql, str) or not sql.strip():
+            raise ValueError("sql must be a non-empty string.")
+
+        conn = _ReadOnlyConnection(sqlitePath)
+        try:
+            cur = conn.cursor()
+            try:
+                cur.execute(sql, tuple(params or ()))
+            except sqlite3.Error as exc:
+                raise sqlite3.DatabaseError(f"SQLite query failed: {exc}") from exc
+            names = [d[0] for d in (cur.description or [])]
+            return [dict(zip(names, row)) for row in cur.fetchall()]
+        finally:
+            conn.close()
+
+    @staticmethod
+    def SQLiteIndex(
+        sqlitePath: Optional[str] = None,
+        tableName: Optional[str] = None,
+        *,
+        valueLimit: int = 40,
+        timeColumn: str = "timestamp",
+    ) -> Dict[str, Any]:
+        """
+        Index a table's columns, and the distinct values of the columns that have few.
+
+        The value lists are the point of this. A question names a campus or a fuel in words;
+        the table stores them as opaque strings in a text column, and nothing else in the
+        schema says which strings exist. Without the list a model has to guess a literal, and
+        a guessed literal returns zero rows that read exactly like an honest 'no data'.
+
+        Columns with more distinct values than `valueLimit` are summarised by count instead
+        of listed: a timestamp column has one value per row, and listing it would drown the
+        prompt in the one thing a model can already reason about.
+
+        Args:
+            sqlitePath: Path to the SQLite database file.
+            tableName: The table to inspect (must exist).
+            valueLimit: Above this many distinct values, a column is counted, not listed.
+            timeColumn: The column holding the observation time, summarised as a range.
+
+        Returns:
+            dict: {
+                'table': str,           # the table name
+                'rows': int,            # how many rows it holds
+                'columns': list[dict],  # {'name', 'type', 'distinct', 'values', 'min', 'max'}
+                                        # 'values' is [] when the column was too wide to list
+            }
+
+        Raises:
+            ValueError:            If inputs are missing, or the table is not in the database.
+            sqlite3.DatabaseError: If the database cannot be read.
+        """
+        if not sqlitePath or not isinstance(sqlitePath, str):
+            raise ValueError("sqlitePath must be a non-empty string path.")
+        if not tableName or not isinstance(tableName, str):
+            raise ValueError("tableName must be a non-empty string.")
+        if not isinstance(valueLimit, int) or valueLimit < 1:
+            raise ValueError("valueLimit must be a positive integer.")
+
+        conn = _ReadOnlyConnection(sqlitePath)
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type IN ('table','view') AND name=?;",
+                        (tableName,))
+            if cur.fetchone() is None:
+                raise ValueError(f"Table '{tableName}' is not in {os.path.abspath(sqlitePath)}.")
+
+            quoted = _QuoteIdentifier(tableName)
+            cur.execute(f"SELECT COUNT(*) FROM {quoted};")
+            rowCount = int(cur.fetchone()[0])
+
+            cur.execute(f"PRAGMA table_info({quoted});")
+            declared = [(str(r[1]), str(r[2] or "")) for r in cur.fetchall()]
+
+            columns: List[Dict[str, Any]] = []
+            for name, colType in declared:
+                col = _QuoteIdentifier(name)
+
+                # An empty declared type means the column was created without one, which is
+                # legal in SQLite; ask the data what it actually holds.
+                if not colType and rowCount:
+                    cur.execute(f"SELECT typeof({col}) FROM {quoted} "
+                                f"WHERE {col} IS NOT NULL LIMIT 1;")
+                    sampled = cur.fetchone()
+                    colType = str(sampled[0]) if sampled else ""
+
+                cur.execute(f"SELECT COUNT(DISTINCT {col}) FROM {quoted};")
+                distinct = int(cur.fetchone()[0])
+
+                cur.execute(f"SELECT MIN({col}), MAX({col}) FROM {quoted};")
+                low, high = cur.fetchone()
+
+                # Listed only when short enough to be read, and only for the columns whose
+                # contents are vocabulary. A number is not: its range already says what it
+                # spans, and listing four readings as if they were the four legal values
+                # invites a model to filter on them. Nor is the time column, whose thousands
+                # of distinct values would drown the prompt.
+                values: List[Any] = []
+                if (distinct <= valueLimit
+                        and name.lower() != timeColumn.lower()
+                        and not _IsNumericType(colType)):
+                    cur.execute(f"SELECT DISTINCT {col} FROM {quoted} WHERE {col} IS NOT NULL "
+                                f"ORDER BY 1 LIMIT {valueLimit};")
+                    values = [r[0] for r in cur.fetchall()]
+
+                columns.append({
+                    "name": name,
+                    "type": colType.upper(),
+                    "distinct": distinct,
+                    "values": values,
+                    "min": low,
+                    "max": high,
+                })
+
+            return {"table": tableName, "rows": rowCount, "columns": columns}
+        finally:
+            conn.close()
+
+    @staticmethod
+    def SQLiteSchemaSummary(
+        sqlitePath: Optional[str] = None,
+        tableName: Optional[str] = None,
+        index: Optional[Dict[str, Any]] = None,
+        *,
+        notes: Optional[str] = None,
+        valueLimit: int = 40,
+        timeColumn: str = "timestamp",
+    ) -> Dict[str, Any]:
+        """
+        Describe a table as the text used to ground an LLM writing SQL against it.
+
+        Three sections, in the order a query is written: TABLE and COLUMNS say what may be
+        selected, VALUES says what the string columns actually contain, and NOTES says how
+        SQLite reads a timestamp. The dialect notes are not decoration - an observation table
+        stores time as ISO 8601 text, so a model reaching for a date function it knows from
+        another engine writes a query that parses and returns nothing.
+
+        Args:
+            sqlitePath: Path to the SQLite database file.
+            tableName: The table to describe.
+            index: The output of Observation.SQLiteIndex. Computed here when not supplied.
+            notes: Domain context the table cannot state itself, appended to NOTES - what a
+                sensor identifier is built from, say. A flat table has no labels and no types
+                to carry that, so only the caller knows it.
+            valueLimit: Passed through to Observation.SQLiteIndex.
+            timeColumn: The column holding the observation time.
+
+        Returns:
+            dict: {
+                'text': str,          # the grounding block
+                'columns': set[str],  # the column names a query may use
+                'table': str,         # the table name
+            }
+
+        Raises:
+            ValueError:            If inputs are missing, or the table is not in the database.
+            sqlite3.DatabaseError: If the database cannot be read.
+        """
+        if index is None:
+            index = Observation.SQLiteIndex(
+                sqlitePath, tableName, valueLimit=valueLimit, timeColumn=timeColumn)
+        if not isinstance(index, dict) or "columns" not in index or "table" not in index:
+            raise ValueError("index must be the dict returned by Observation.SQLiteIndex.")
+
+        table = index["table"]
+        lines: List[str] = ["TABLE", f"  {_QuoteIdentifier(table)}  ({index['rows']} rows)"]
+
+        lines.append("\nCOLUMNS (name, SQLite type, what it spans)")
+        for col in index["columns"]:
+            span = ""
+            if col["min"] is not None or col["max"] is not None:
+                span = f", from {col['min']!r} to {col['max']!r}"
+            lines.append(f"  {_QuoteIdentifier(col['name']):<26} {col['type'] or 'TEXT':<8}"
+                         f"  {col['distinct']} distinct{span}")
+
+        listed = [col for col in index["columns"] if col["values"]]
+        if listed:
+            lines.append("\nVALUES (the complete contents of the columns short enough to list -\n"
+                         "        match these exactly, they are the only ones in the table)")
+            for col in listed:
+                rendered = ", ".join(repr(v) for v in col["values"])
+                lines.append(f"  {_QuoteIdentifier(col['name'])}: {rendered}")
+
+        lines.append(
+            "\nNOTES\n"
+            "  A column name containing ':' or a space MUST be double-quoted, e.g.\n"
+            f'    SELECT "sosa:madeBySensor" FROM {_QuoteIdentifier(table)}\n'
+            f"  {_QuoteIdentifier(timeColumn)} is ISO 8601 TEXT: it sorts and compares as text, and is\n"
+            "  read with strftime - strftime('%Y', ts) for the year, '%Y-%m' for the month.\n"
+            "  SQLite has no DATE type and no EXTRACT, DATEPART, DATE_TRUNC or TO_CHAR.\n"
+            "  Aggregate with SUM, AVG, MIN, MAX, COUNT and group with GROUP BY. There is no\n"
+            "  other table to join: everything is in this one.")
+        if notes and isinstance(notes, str) and notes.strip():
+            lines.append("  " + notes.strip().replace("\n", "\n  "))
+
+        return {
+            "text": "\n".join(lines),
+            "columns": {col["name"] for col in index["columns"]},
+            "table": table,
+        }
+
+    @staticmethod
+    def SQLiteCopy(sqlitePath: Optional[str] = None, savePath: Optional[str] = None) -> str:
+        """
+        Copy a database, through SQLite's own backup API.
+
+        Not shutil: a database with a write-ahead log lives in more than one file, and copying
+        the bytes of the main one gives a snapshot that is missing its most recent commits.
+        The backup API reads it as a database and writes a consistent one out.
+
+        Args:
+            sqlitePath: The database to copy.
+            savePath: Where to write the copy. Overwritten if it is already there.
+
+        Returns:
+            str: The absolute path to the copy.
+
+        Raises:
+            ValueError:            If inputs are missing, or the source is not there.
+            sqlite3.DatabaseError: If the copy could not be made.
+        """
+        if not savePath or not isinstance(savePath, str) or not savePath.strip():
+            raise ValueError("savePath must be a non-empty string path.")
+
+        target = os.path.abspath(savePath)
+        if target == os.path.abspath(sqlitePath or ""):
+            raise ValueError("savePath must differ from sqlitePath.")
+        if os.path.dirname(target):
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+
+        source = _ReadOnlyConnection(sqlitePath)
+        try:
+            destination = sqlite3.connect(target)
+            try:
+                source.backup(destination)
+            finally:
+                destination.close()
+        except sqlite3.Error as exc:
+            raise sqlite3.DatabaseError(f"Could not copy the database to {target}: {exc}") from exc
+        finally:
+            source.close()
+        return target
+
+    @staticmethod
+    def SQLiteApplyUpdate(
+        sqlitePath: Optional[str] = None,
+        tableName: Optional[str] = None,
+        sql: Optional[str] = None,
+        *,
+        commit: bool = False,
+        diffLimit: int = 20000,
+    ) -> Tuple[int, List[Dict[str, Any]], List[Dict[str, Any]], str]:
+        """
+        Run an update inside a transaction and report what it changed.
+
+        The table's counterpart to Tool.RDFApplyUpdate, and it reaches the same guarantee by
+        a different route: there the update is applied to a copy of the graph, here it is
+        applied inside a transaction that is rolled back unless `commit` says otherwise. Both
+        let the caller read the change before anything is committed, and both tell an update
+        that worked apart from one that ran and moved nothing.
+
+        The diff is a multiset difference over whole rows, so a table holding two identical
+        observations and losing one of them reports one removal rather than none.
+
+        Args:
+            sqlitePath: Path to the SQLite database file.
+            tableName: The table the update writes to, whose rows are diffed.
+            sql: The update, already through SQL.ValidateUpdate.
+            commit: When True the transaction is committed and the file changes. When False
+                (default) it is rolled back and the file is left exactly as it was, which is
+                what makes a rehearsal possible.
+            diffLimit: Above this many rows, the table is not snapshotted and 'added' and
+                'removed' come back empty. `changes` is still exact - SQLite counts it either
+                way - so an edit to a table of millions still reports how many rows it moved,
+                just not which.
+
+        Returns:
+            tuple: (rows changed, rows added, rows removed, "") when the update ran, or
+                (0, [], [], the reason) when it did not. A statement that ran and changed
+                nothing returns (0, [], [], "") - the empty reason is what tells the two apart.
+
+        Raises:
+            ValueError: If inputs are missing, or the table is not in the database.
+        """
+        if not sql or not isinstance(sql, str) or not sql.strip():
+            raise ValueError("sql must be a non-empty string.")
+        if not tableName or not isinstance(tableName, str):
+            raise ValueError("tableName must be a non-empty string.")
+        if not isinstance(diffLimit, int) or diffLimit < 0:
+            raise ValueError("diffLimit must be a non-negative integer.")
+
+        conn = _WritableConnection(sqlitePath)
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;",
+                        (tableName,))
+            if cur.fetchone() is None:
+                raise ValueError(f"Table '{tableName}' is not in {os.path.abspath(sqlitePath)}.")
+
+            quoted = _QuoteIdentifier(tableName)
+            cur.execute(f"SELECT COUNT(*) FROM {quoted};")
+            diffable = int(cur.fetchone()[0]) <= diffLimit
+            names, before = _Snapshot(cur, quoted) if diffable else ([], Counter())
+
+            # total_changes counts from when the connection was opened, not from zero
+            startChanges = conn.total_changes
+            try:
+                cur.execute(sql)
+            except sqlite3.Error as exc:
+                conn.rollback()
+                return 0, [], [], f"The update failed to run: {exc}"
+            changes = conn.total_changes - startChanges
+
+            added: List[Dict[str, Any]] = []
+            removed: List[Dict[str, Any]] = []
+            if diffable:
+                _, after = _Snapshot(cur, quoted)
+                added = _AsRows(names, after - before)
+                removed = _AsRows(names, before - after)
+
+            conn.commit() if commit else conn.rollback()
+            return changes, added, removed, ""
+        finally:
+            conn.close()
+
+    @staticmethod
+    def SQLiteSourceRows(
+        rows: Optional[List[Dict[str, Any]]] = None,
+        column: str = "sosa:madeBySensor",
+    ) -> List[str]:
+        """
+        The sensors an answer rests on.
+
+        The table's counterpart to RDF.SourceNodes: an RDF answer is traced back to the nodes
+        it read, a table answer to the sensors whose observations it aggregated. It works
+        only when the query kept the identifying column - an answer that summed everything
+        into a single number is grounded in the whole table, and says so by returning [].
+
+        Args:
+            rows: The rows returned by Observation.SQLiteFetch.
+            column: The identifying column to collect. Matched case-insensitively, because a
+                query is free to re-case it.
+
+        Returns:
+            list[str]: Distinct values, in the order they first appear in the rows.
+
+        Raises:
+            TypeError: If `rows` is not a list.
+        """
+        if rows is None:
+            rows = []
+        if not isinstance(rows, list):
+            raise TypeError("rows must be a list.")
+
+        wanted = column.lower()
+        source: List[str] = []
+        for row in rows:
+            for key, value in row.items():
+                if str(key).lower() == wanted and value is not None and str(value) not in source:
+                    source.append(str(value))
+        return source
+
+
+def _QuoteIdentifier(name: str) -> str:
+    """Double-quote a table or column name, doubling any quote inside it."""
+    return '"' + str(name).replace('"', '""') + '"'
+
+
+def _IsNumericType(declaredType: str) -> bool:
+    """
+    Whether a declared SQLite type holds numbers.
+
+    Matched on a substring, the way SQLite's own type affinity rules do: 'DOUBLE PRECISION'
+    and 'UNSIGNED BIG INT' are both real declarations, and neither is an exact keyword.
+    """
+    upper = str(declaredType or "").upper()
+    return any(token in upper for token in ("INT", "REAL", "FLOA", "DOUB", "NUM", "DEC"))
+
+
+def _ReadOnlyConnection(sqlitePath: str) -> sqlite3.Connection:
+    """
+    Open a database that SQLite itself will refuse to let anything write to.
+
+    The belt to SQL.Validate's braces: the validator reads text and can be talked around,
+    'mode=ro' is enforced by the engine. The URI form is the only way to ask for it, and a
+    Windows path has to be turned into one first - as_uri() also percent-encodes the spaces
+    and accents a real project path is full of, which SQLite decodes back.
+
+    Raises:
+        ValueError: If the file is not there. sqlite3 would otherwise happily create an
+            empty database and answer every question with 'no rows', which reads like data.
+        sqlite3.DatabaseError: If the file is there but cannot be opened.
+    """
+    absPath = os.path.abspath(sqlitePath)
+    if not os.path.isfile(absPath):
+        raise ValueError(f"No SQLite database at {absPath}.")
+    try:
+        return sqlite3.connect(f"{Path(absPath).as_uri()}?mode=ro", uri=True)
+    except sqlite3.Error as exc:
+        raise sqlite3.DatabaseError(f"Could not open {absPath} read-only: {exc}") from exc
+
+
+# Anything that writes, changes the schema, reaches another file, or steps outside the query
+# engine. 'REPLACE' is handled apart, in SQL.Validate: it is also SQLite's string function,
+# and rejecting replace(x, y, z) would ban a legitimate SELECT.
+FORBIDDEN_SQL_KEYWORDS = ("INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "ATTACH",
+                          "DETACH", "PRAGMA", "VACUUM", "REINDEX", "TRIGGER", "BEGIN",
+                          "COMMIT", "ROLLBACK", "SAVEPOINT", "RELEASE", "LOAD_EXTENSION",
+                          "READFILE", "WRITEFILE", "EDIT", "FTS3_TOKENIZER")
+
+
+def _WritableConnection(sqlitePath: str) -> sqlite3.Connection:
+    """
+    Open a database for writing, without ever creating one.
+
+    sqlite3.connect() makes an empty database out of a path that is not there, which turns a
+    mistyped filename into an edit that reports success and changes nothing anybody will find.
+
+    Raises:
+        ValueError:            If the file is not there.
+        sqlite3.DatabaseError: If it is there but cannot be opened.
+    """
+    absPath = os.path.abspath(sqlitePath or "")
+    if not os.path.isfile(absPath):
+        raise ValueError(f"No SQLite database at {absPath}.")
+    try:
+        return sqlite3.connect(absPath)
+    except sqlite3.Error as exc:
+        raise sqlite3.DatabaseError(f"Could not open {absPath}: {exc}") from exc
+
+
+def _Snapshot(cursor: sqlite3.Cursor, quotedTable: str) -> Tuple[List[str], "Counter"]:
+    """
+    Every row of a table as a multiset of tuples, with the column names beside it.
+
+    A multiset, not a set: an observation table may legitimately hold the same reading twice,
+    and a set would report deleting one of them as no change at all.
+    """
+    cursor.execute(f"SELECT * FROM {quotedTable};")
+    names = [d[0] for d in (cursor.description or [])]
+    return names, Counter(cursor.fetchall())
+
+
+def _AsRows(names: List[str], counted: "Counter") -> List[Dict[str, Any]]:
+    """A multiset difference back into dictionaries, in a stable order."""
+    rows: List[Dict[str, Any]] = []
+    for values in sorted(counted.elements(), key=lambda row: tuple(str(v) for v in row)):
+        rows.append(dict(zip(names, values)))
+    return rows
+
+
+# Everything forbidden in a query, less the three writes an edit exists to make. Transaction
+# control is on the list for a reason of its own: the cycle rehearses an edit inside a
+# transaction it rolls back, and a model-issued COMMIT would make that rollback a no-op.
+FORBIDDEN_SQL_UPDATE_KEYWORDS = tuple(
+    keyword for keyword in FORBIDDEN_SQL_KEYWORDS
+    if keyword not in ("INSERT", "UPDATE", "DELETE"))
+
+# The table an INSERT, UPDATE or DELETE writes to. Read off the raw text rather than the
+# scanned body, because that is where a quoted name survives.
+WRITE_TARGET = re.compile(
+    r'(?is)\b(?:INSERT(?:\s+OR\s+[A-Z]+)?\s+INTO|UPDATE(?:\s+OR\s+[A-Z]+)?|DELETE\s+FROM)\s+'
+    r'("(?:[^"]|"")*"|\[[^\]]*\]|`(?:[^`]|``)*`|[A-Za-z_]\w*)')
+
+
+def _Unquote(identifier: str) -> str:
+    """Strip the quoting off a table name, in any of the four styles SQLite accepts."""
+    text = identifier.strip()
+    if len(text) >= 2:
+        if text[0] == '"' and text[-1] == '"':
+            return text[1:-1].replace('""', '"')
+        if text[0] == "[" and text[-1] == "]":
+            return text[1:-1]
+        if text[0] == "`" and text[-1] == "`":
+            return text[1:-1].replace("``", "`")
+    return text
+
+
+def _ScanSQL(sql: str) -> str:
+    """
+    Blank out string literals, quoted identifiers and comments, so keyword scanning sees
+    structure only.
+
+    Without it a column legitimately named "deleted_at", or the literal 'DROP', reads as an
+    attack. Literals go first: a '--' inside a string opens no comment.
+    """
+    text = re.sub(r"'(?:[^']|'')*'", "''", sql)          # string literals, '' escapes itself
+    text = re.sub(r'"(?:[^"]|"")*"', '""', text)         # double-quoted identifiers
+    text = re.sub(r"\[[^\]]*\]", "[]", text)             # bracket identifiers
+    text = re.sub(r"`(?:[^`]|``)*`", "``", text)         # backtick identifiers
+    text = re.sub(r"--[^\n]*", " ", text)                # line comments
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)   # block comments
+    return text
+
+
+class SQL():
+
+    @staticmethod
+    def Form(sql: Optional[str] = None) -> str:
+        """
+        Tell what kind of statement this is, by its first keyword.
+
+        Args:
+            sql: The SQL text.
+
+        Returns:
+            str: The opening keyword in upper case ('SELECT', 'WITH', 'INSERT', ...), or ''
+                when the text carries no word at all.
+        """
+        if not sql or not isinstance(sql, str):
+            return ""
+        match = re.search(r"(?is)\b([A-Za-z_]+)\b", _ScanSQL(sql))
+        return match.group(1).upper() if match else ""
+
+    @staticmethod
+    def Validate(
+        sql: Optional[str] = None,
+        sqlitePath: Optional[str] = None,
+        rowLimit: int = 100,
+        columns: Optional[Set[str]] = None,
+    ) -> Tuple[Optional[str], str]:
+        """
+        Check a query before it is allowed near a database.
+
+        Five passes, most dangerous first: shape, safety, one statement, compilation, limit.
+        The compilation pass is the one that earns its keep, and it is stricter than anything
+        the SPARQL side can offer: SQLite is asked to EXPLAIN the query, which compiles it in
+        full - resolving every table, column and function - without executing a single row. A
+        hallucinated column is rejected here by name, instead of being left to return zero
+        rows that read like an honest empty answer.
+
+        Args:
+            sql: The SQL text to check.
+            sqlitePath: The database to compile against. Compilation is skipped when not
+                supplied, which leaves only the text passes.
+            rowLimit: LIMIT appended to a query that carries none.
+            columns: The column names a query may use, from
+                Observation.SQLiteSchemaSummary()['columns']. Used only to word the rejection
+                a failed compilation gives back to the repair agent.
+
+        Returns:
+            tuple: (query ready to run, "") when it passes, or (None, the reason it was
+                rejected) when it does not.
+        """
+        if not sql or not isinstance(sql, str) or not sql.strip():
+            return None, "The model returned an empty query."
+
+        body = _ScanSQL(sql)
+
+        form = SQL.Form(sql)
+        if not form:
+            return None, "No SELECT found - this does not look like a query."
+        if form not in ("SELECT", "WITH"):
+            return None, f"{form} is not allowed; write a SELECT (a WITH ... SELECT is fine)."
+        if form == "WITH" and not re.search(r"(?is)\bSELECT\b", body):
+            return None, "A WITH must end in a SELECT."
+
+        for keyword in FORBIDDEN_SQL_KEYWORDS:
+            if re.search(rf"(?i)\b{keyword}\b", body):
+                return None, f"'{keyword}' is not allowed in this query."
+        # REPLACE the statement, not replace() the string function
+        if re.search(r"(?i)\bREPLACE\b(?!\s*\()", body):
+            return None, "'REPLACE' is not allowed in this query."
+
+        # One statement only: a trailing ';' is fine, a second statement after it is not.
+        if re.search(r";\s*\S", body):
+            return None, "Write a single statement: ';' may only close the query."
+
+        stripped = sql.strip().rstrip(";").rstrip()
+
+        if sqlitePath:
+            try:
+                conn = _ReadOnlyConnection(sqlitePath)
+            except (ValueError, sqlite3.DatabaseError) as exc:
+                return None, str(exc)
+            try:
+                # EXPLAIN compiles and stops: it resolves names and types, and runs nothing
+                conn.execute(f"EXPLAIN {stripped}")
+            except sqlite3.Error as exc:
+                known = f" Columns available: {', '.join(sorted(columns))}." if columns else ""
+                return None, f"SQLite rejected the query: {exc}.{known}"
+            finally:
+                conn.close()
+
+        # A missing LIMIT is a defect in the query, not a reason to send it back to the model
+        if not re.search(r"(?i)\bLIMIT\b", body):
+            stripped = f"{stripped}\nLIMIT {rowLimit}"
+
+        return stripped, ""
+
+    @staticmethod
+    def ValidateUpdate(
+        sql: Optional[str] = None,
+        tableName: Optional[str] = None,
+        sqlitePath: Optional[str] = None,
+        columns: Optional[Set[str]] = None,
+    ) -> Tuple[Optional[str], str]:
+        """
+        Check an update before it is allowed to change a database.
+
+        The same passes as SQL.Validate with the shape pass inverted: here a write is the
+        point, so INSERT, UPDATE and DELETE are the only openings accepted, and everything
+        that would replace or empty the table rather than edit its content is not.
+
+        Three refusals are worth naming, because each is a way of destroying data while
+        answering the request as put:
+
+        - An UPDATE or a DELETE with no WHERE. 'Delete the faulty readings' with the WHERE
+          left off empties the table, and SQLite will not warn anyone. This is the table's
+          version of the DROP and CLEAR that SPARQL.ValidateUpdate refuses outright.
+        - REPLACE INTO, or INSERT OR REPLACE. Both delete whatever row they collide with
+          before inserting, so a statement that reads as an addition silently removes data
+          nobody mentioned. Plain INSERT, or an explicit UPDATE, says what it means.
+        - A write to any table but the one named. An edit confined to the table the caller
+          is looking at is the counterpart of confining a SPARQL update to the default graph.
+
+        Args:
+            sql: The SQL text to check.
+            tableName: The only table this update may write to. The target check is skipped
+                when not supplied.
+            sqlitePath: The database to compile against, through EXPLAIN, which resolves
+                every name and executes nothing - so this stays a read-only operation even
+                for a statement that writes. Skipped when not supplied.
+            columns: The column names an update may use, from
+                Observation.SQLiteSchemaSummary()['columns']. Used only to word the rejection.
+
+        Returns:
+            tuple: (update ready to run, "") when it passes, or (None, the reason it was
+                rejected) when it does not.
+        """
+        if not sql or not isinstance(sql, str) or not sql.strip():
+            return None, "The model returned an empty update."
+
+        body = _ScanSQL(sql)
+
+        form = SQL.Form(sql)
+        if not form:
+            return None, "No INSERT, UPDATE or DELETE found - this does not look like an update."
+        if form not in ("INSERT", "UPDATE", "DELETE", "REPLACE"):
+            return None, (f"{form} is not allowed; write an INSERT, an UPDATE or a DELETE.")
+
+        for keyword in FORBIDDEN_SQL_UPDATE_KEYWORDS:
+            if re.search(rf"(?i)\b{keyword}\b", body):
+                return None, f"'{keyword}' is not allowed in this update."
+
+        # REPLACE as a statement, and its 'INSERT OR REPLACE' spelling: both delete on
+        # collision. replace() the string function is left alone.
+        if form == "REPLACE" or re.search(r"(?i)\bOR\s+REPLACE\b", body):
+            return None, ("REPLACE deletes the row it collides with. Write a plain INSERT to "
+                          "add a row, or an UPDATE to change one that is already there.")
+
+        if re.search(r";\s*\S", body):
+            return None, "Write a single statement: ';' may only close the update."
+
+        if form in ("UPDATE", "DELETE") and not re.search(r"(?i)\bWHERE\b", body):
+            article, damage = ("An", "rewrite") if form == "UPDATE" else ("A", "empty")
+            return None, (f"{article} {form} must carry a WHERE clause naming the rows to "
+                          f"change. Without one it would {damage} the whole table.")
+
+        if tableName:
+            # Compared case-insensitively, because SQLite identifiers are, but reported in the
+            # spelling the statement used: an error naming a table the model never wrote is
+            # one more thing for the repair agent to be confused by.
+            targets = {_Unquote(match): _Unquote(match).lower()
+                       for match in WRITE_TARGET.findall(sql)}
+            if not targets:
+                return None, "Could not tell which table this update writes to."
+            stray = sorted(written for written, folded in targets.items()
+                           if folded != tableName.lower())
+            if stray:
+                return None, (f"This update writes to {', '.join(repr(t) for t in stray)}. "
+                              f"It may only write to '{tableName}'.")
+
+        stripped = sql.strip().rstrip(";").rstrip()
+
+        if sqlitePath:
+            try:
+                # Read-only on purpose: EXPLAIN compiles a write without being allowed to
+                # make one, so a statement is checked against the real schema with the engine
+                # itself guaranteeing the database cannot move while it happens
+                conn = _ReadOnlyConnection(sqlitePath)
+            except (ValueError, sqlite3.DatabaseError) as exc:
+                return None, str(exc)
+            try:
+                conn.execute(f"EXPLAIN {stripped}")
+            except sqlite3.Error as exc:
+                known = f" Columns available: {', '.join(sorted(columns))}." if columns else ""
+                return None, f"SQLite rejected the update: {exc}.{known}"
+            finally:
+                conn.close()
+
+        return stripped, ""

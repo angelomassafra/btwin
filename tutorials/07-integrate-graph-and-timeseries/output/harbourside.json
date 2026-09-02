@@ -1,0 +1,1232 @@
+{
+    "@context": {
+        "brick": "https://brickschema.org/schema/Brick#",
+        "bot": "https://w3id.org/bot#",
+        "ifc": "https://standards.buildingsmart.org/IFC/DEV/IFC4/ADD2_TC1/OWL#",
+        "btwin": "btwin#"
+    },
+    "@graph": [
+        {
+            "@id": "site",
+            "@type": "bot:Site",
+            "relationships": {},
+            "name": "Harbourside Campus"
+        },
+        {
+            "@id": "B1",
+            "@type": "bot:Building",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "site",
+                        "@type": "bot:Site"
+                    }
+                ],
+                "btwin:hasDocument": [
+                    {
+                        "@id": "B1-electricity-db",
+                        "@type": "btwin:Document"
+                    },
+                    {
+                        "@id": "B1-water-db",
+                        "@type": "btwin:Document"
+                    }
+                ]
+            },
+            "name": "Library"
+        },
+        {
+            "@id": "B1-F0",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B1",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "Library - Ground Floor"
+        },
+        {
+            "@id": "B1-F0-S01",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B1-F0",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B1-F0-S01-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Reading Room"
+        },
+        {
+            "@id": "B1-F0-S01-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 260.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 3.6,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 90,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B1-F0-S02",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B1-F0",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B1-F0-S02-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Stacks"
+        },
+        {
+            "@id": "B1-F0-S02-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 180.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 3.0,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 6,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B1-F1",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B1",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "Library - First Floor"
+        },
+        {
+            "@id": "B1-F1-S01",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B1-F1",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B1-F1-S01-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Study Carrels"
+        },
+        {
+            "@id": "B1-F1-S01-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 260.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 3.6,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 90,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B1-F1-S02",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B1-F1",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B1-F1-S02-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Quiet Room"
+        },
+        {
+            "@id": "B1-F1-S02-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 260.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 3.6,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 90,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B2",
+            "@type": "bot:Building",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "site",
+                        "@type": "bot:Site"
+                    }
+                ],
+                "btwin:hasDocument": [
+                    {
+                        "@id": "B2-electricity-db",
+                        "@type": "btwin:Document"
+                    },
+                    {
+                        "@id": "B2-water-db",
+                        "@type": "btwin:Document"
+                    }
+                ]
+            },
+            "name": "Science Block"
+        },
+        {
+            "@id": "B2-F0",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B2",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "Science Block - Ground Floor"
+        },
+        {
+            "@id": "B2-F0-S01",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B2-F0",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B2-F0-S01-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Prep Room"
+        },
+        {
+            "@id": "B2-F0-S01-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 45.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 2.7,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 4,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B2-F0-S02",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B2-F0",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B2-F0-S02-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Store"
+        },
+        {
+            "@id": "B2-F0-S02-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 180.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 3.0,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 6,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B2-F1",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B2",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "Science Block - First Floor"
+        },
+        {
+            "@id": "B2-F1-S01",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B2-F1",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B2-F1-S01-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Wet Lab A"
+        },
+        {
+            "@id": "B2-F1-S01-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 140.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 3.4,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 18,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B2-F1-S02",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B2-F1",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B2-F1-S02-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Wet Lab B"
+        },
+        {
+            "@id": "B2-F1-S02-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 140.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 3.4,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 18,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B3",
+            "@type": "bot:Building",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "site",
+                        "@type": "bot:Site"
+                    }
+                ],
+                "btwin:hasDocument": [
+                    {
+                        "@id": "B3-electricity-db",
+                        "@type": "btwin:Document"
+                    },
+                    {
+                        "@id": "B3-water-db",
+                        "@type": "btwin:Document"
+                    }
+                ]
+            },
+            "name": "Sports Hall"
+        },
+        {
+            "@id": "B3-F0",
+            "@type": "bot:Storey",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B3",
+                        "@type": "bot:Building"
+                    }
+                ]
+            },
+            "name": "Sports Hall - Ground Floor"
+        },
+        {
+            "@id": "B3-F0-S01",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B3-F0",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B3-F0-S01-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Main Hall"
+        },
+        {
+            "@id": "B3-F0-S01-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 860.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 8.0,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 300,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B3-F0-S02",
+            "@type": "bot:Space",
+            "relationships": {
+                "brick:hasLocation": [
+                    {
+                        "@id": "B3-F0",
+                        "@type": "bot:Storey"
+                    }
+                ],
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B3-F0-S02-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Changing Rooms"
+        },
+        {
+            "@id": "B3-F0-S02-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Space Quantities",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "NetFloorArea",
+                    "nominalValue": {
+                        "type": "IfcAreaMeasure",
+                        "value": 45.0,
+                        "unit": "m2"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ClearHeight",
+                    "nominalValue": {
+                        "type": "IfcLengthMeasure",
+                        "value": 2.7,
+                        "unit": "m"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "OccupantCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 4,
+                        "unit": "people"
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B1-electricity-db",
+            "@type": "btwin:Document",
+            "relationships": {
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B1-electricity-db-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Library - electricity readings 2025"
+        },
+        {
+            "@id": "B1-electricity-db-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Database Location",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "FilePath",
+                    "nominalValue": {
+                        "type": "IfcText",
+                        "value": "output/databases/HB-B1-electricity.db",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "TableName",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "observations",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "SensorID",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "HB-B1-EM",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ObservedProperty",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "ElectricityConsumption",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "Unit",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "kWh",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "RowCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 12,
+                        "unit": "rows"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodStart",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-01-01T00:00:00Z",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodEnd",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-12-01T00:00:00Z",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B1-water-db",
+            "@type": "btwin:Document",
+            "relationships": {
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B1-water-db-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Library - water readings 2025"
+        },
+        {
+            "@id": "B1-water-db-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Database Location",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "FilePath",
+                    "nominalValue": {
+                        "type": "IfcText",
+                        "value": "output/databases/HB-B1-water.db",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "TableName",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "observations",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "SensorID",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "HB-B1-WM",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ObservedProperty",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "WaterConsumption",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "Unit",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "m3",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "RowCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 12,
+                        "unit": "rows"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodStart",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-01-01T00:00:00Z",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodEnd",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-12-01T00:00:00Z",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B2-electricity-db",
+            "@type": "btwin:Document",
+            "relationships": {
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B2-electricity-db-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Science Block - electricity readings 2025"
+        },
+        {
+            "@id": "B2-electricity-db-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Database Location",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "FilePath",
+                    "nominalValue": {
+                        "type": "IfcText",
+                        "value": "output/databases/HB-B2-electricity.db",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "TableName",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "observations",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "SensorID",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "HB-B2-EM",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ObservedProperty",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "ElectricityConsumption",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "Unit",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "kWh",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "RowCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 12,
+                        "unit": "rows"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodStart",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-01-01T00:00:00Z",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodEnd",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-12-01T00:00:00Z",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B2-water-db",
+            "@type": "btwin:Document",
+            "relationships": {
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B2-water-db-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Science Block - water readings 2025"
+        },
+        {
+            "@id": "B2-water-db-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Database Location",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "FilePath",
+                    "nominalValue": {
+                        "type": "IfcText",
+                        "value": "output/databases/HB-B2-water.db",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "TableName",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "observations",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "SensorID",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "HB-B2-WM",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ObservedProperty",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "WaterConsumption",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "Unit",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "m3",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "RowCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 12,
+                        "unit": "rows"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodStart",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-01-01T00:00:00Z",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodEnd",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-12-01T00:00:00Z",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B3-electricity-db",
+            "@type": "btwin:Document",
+            "relationships": {
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B3-electricity-db-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Sports Hall - electricity readings 2025"
+        },
+        {
+            "@id": "B3-electricity-db-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Database Location",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "FilePath",
+                    "nominalValue": {
+                        "type": "IfcText",
+                        "value": "output/databases/HB-B3-electricity.db",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "TableName",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "observations",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "SensorID",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "HB-B3-EM",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ObservedProperty",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "ElectricityConsumption",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "Unit",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "kWh",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "RowCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 12,
+                        "unit": "rows"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodStart",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-01-01T00:00:00Z",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodEnd",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-12-01T00:00:00Z",
+                        "unit": null
+                    }
+                }
+            ]
+        },
+        {
+            "@id": "B3-water-db",
+            "@type": "btwin:Document",
+            "relationships": {
+                "ifc:HasPropertySets": [
+                    {
+                        "@id": "B3-water-db-PSET",
+                        "@type": "ifc:IfcPropertySet"
+                    }
+                ]
+            },
+            "name": "Sports Hall - water readings 2025"
+        },
+        {
+            "@id": "B3-water-db-PSET",
+            "@type": "ifc:IfcPropertySet",
+            "name": "Database Location",
+            "ifc:HasProperties": [
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "FilePath",
+                    "nominalValue": {
+                        "type": "IfcText",
+                        "value": "output/databases/HB-B3-water.db",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "TableName",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "observations",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "SensorID",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "HB-B3-WM",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "ObservedProperty",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "WaterConsumption",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "Unit",
+                    "nominalValue": {
+                        "type": "IfcLabel",
+                        "value": "m3",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "RowCount",
+                    "nominalValue": {
+                        "type": "IfcCountMeasure",
+                        "value": 12,
+                        "unit": "rows"
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodStart",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-01-01T00:00:00Z",
+                        "unit": null
+                    }
+                },
+                {
+                    "@type": "IfcPropertySingleValue",
+                    "name": "PeriodEnd",
+                    "nominalValue": {
+                        "type": "IfcDateTime",
+                        "value": "2025-12-01T00:00:00Z",
+                        "unit": null
+                    }
+                }
+            ]
+        }
+    ]
+}

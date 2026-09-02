@@ -2,7 +2,7 @@
 BTWIN - A toolkit for graph-based decision support system prototypes in building management.
 """
 
-__version__ = "0.5.7"
+__version__ = "0.5.8"
 __author__ = "Angelo Massafra"
 
 from .document import Document
@@ -11,7 +11,7 @@ from .graph import RDF, SPARQL, NetworkX
 from .kpi_set import KPI, KPISet
 from .llm import LLM, CostMeter, Cycle, Tool
 from .plot import Color, GraphPlot
-from .point import Observation, Point
+from .point import SQL, Observation, Point
 from .property_set import Property, PropertySet
 from .scenario import Scenario
 from .schema import Schema
@@ -26,6 +26,7 @@ __all__ = [
     "Inventory",
     "Point",
     "Observation",
+    "SQL",
     "PropertySet",
     "Property",
     "KPISet",

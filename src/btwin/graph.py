@@ -2383,8 +2383,9 @@ class RDF():
                 rdfGraph.add((subj, RDFS.label, Literal(nodeName)))
 
             for key, value in obj.items():
-                # Handled elsewhere: identity, types, edges, label, and PSet contents
-                if key in {"@id", "@type", "name", "relationships", "ifc:HasProperties"}:
+                # Handled elsewhere: identity, types, edges, label, PSet and KPI contents
+                if key in {"@id", "@type", "name", "relationships", "ifc:HasProperties",
+                           "btwin:hasKPIs"}:
                     continue
 
                 # Scalar attributes are emitted when their key is a usable CURIE
@@ -2429,6 +2430,65 @@ class RDF():
                             rdfGraph.add((propNode, ifcNs["NominalValue"], Literal(entry["value"])))
                         if entry.get("unit") is not None:
                             rdfGraph.add((propNode, ifcNs["Unit"], Literal(entry["unit"])))
+
+            # KPIs: one NAMED node each, carrying value and unit
+            #
+            # Named rather than blank, unlike the properties above, because a KPI has its own
+            # '@id' and is a thing worth pointing at: an answer that quotes a figure should be
+            # able to say which KPI it came from. The value and the unit go on ifc:NominalValue
+            # and ifc:Unit rather than on eko: predicates of their own - the KPI object stores
+            # them in the same 'nominalValue' shape an IFC property uses, and reusing the
+            # predicates means everything that already knows how to read a value out of this
+            # graph reads a KPI too, with no change: RDF.SchemaSummary's notes, the property
+            # blocks the LLM cycles are grounded on, and any query already written.
+            kpis = obj.get("btwin:hasKPIs")
+            if isinstance(kpis, dict):
+                kpis = list(kpis.values())
+            if isinstance(kpis, list) and kpis:
+                # The ifc prefix is bound on demand rather than required. A document holding
+                # only KPIs has no IFC in its context - nothing in it is an IFC property - so
+                # insisting on one would mean the values silently went missing for exactly
+                # the documents this was written for.
+                if "ifc" not in namespaces:
+                    ifcIri = Serialization.IRIs()["prefixes"].get("ifc")
+                    if ifcIri:
+                        namespaces["ifc"] = Namespace(ifcIri)
+                        rdfGraph.bind("ifc", namespaces["ifc"])
+                ifcNs = namespaces.get("ifc")
+                for kpi in kpis:
+                    if not isinstance(kpi, dict):
+                        continue
+                    kpiId = kpi.get("@id")
+                    if not isinstance(kpiId, str) or not kpiId.strip():
+                        continue          # a KPI with no identity cannot be pointed at
+
+                    kpiNode = entity_uri(kpiId)
+                    try:
+                        pfx, local = split_curie("btwin:hasKPIs")
+                        rdfGraph.add((subj, namespaces[pfx][local], kpiNode))
+                    except (ValueError, KeyError):
+                        continue          # no btwin prefix in the context: nothing to hang it on
+
+                    kpiName = kpi.get("name")
+                    if isinstance(kpiName, (str, int, float, bool)) and str(kpiName).strip():
+                        rdfGraph.add((kpiNode, RDFS.label, Literal(kpiName)))
+
+                    kpiType = kpi.get("@type")
+                    if isinstance(kpiType, str) and kpiType.strip():
+                        try:
+                            tpfx, tlocal = split_curie(kpiType)
+                            if tpfx in namespaces:
+                                rdfGraph.add((kpiNode, RDF.type, namespaces[tpfx][tlocal]))
+                        except ValueError:
+                            pass
+
+                    nominal = kpi.get("nominalValue")
+                    if isinstance(nominal, dict) and ifcNs is not None:
+                        if nominal.get("value") is not None:
+                            rdfGraph.add((kpiNode, ifcNs["NominalValue"],
+                                          Literal(nominal["value"])))
+                        if nominal.get("unit") is not None:
+                            rdfGraph.add((kpiNode, ifcNs["Unit"], Literal(nominal["unit"])))
 
         # --- Add relationships (edges) ----------------------------------------
         for obj in graphNodes:

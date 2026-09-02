@@ -13,8 +13,9 @@ Four things live in `btwin.llm`, in widening order of specificity:
   sent back, and what the caller gets at the end.
 
 Tools reuse the deterministic library rather than reimplementing it:
-[`RDF` and `SPARQL`](graph.md) do the graph and query work, `Schema`, `Serialization` and
-`SpatialElement` supply the BTwin vocabulary and notation.
+[`RDF` and `SPARQL`](graph.md) do the graph and query work, [`Observation` and `SQL`](point.md)
+the table and SQL work, `Schema`, `Serialization` and `SpatialElement` supply the BTwin
+vocabulary and notation.
 
 Install the optional dependencies with `pip install btwin[llm]`, and put an OpenRouter key in
 `OPENROUTER_API_KEY`.
@@ -36,6 +37,29 @@ result = Cycle.RDFQueryByPrompt(
 print(result["answer"], result["sparql"], result["source"])
 print(CostMeter.Describe(meter.Total()))
 ```
+
+`Cycle.SQLiteQueryByPrompt` is the same pipeline over measured data instead of a graph: a
+SQLite table written in the shape of `Observation.Template`, one row per observation.
+
+```python
+from btwin import LLM, Cycle, Observation
+
+llm = LLM.Constructor()
+result = Cycle.SQLiteQueryByPrompt(
+    "energyBills.db", "energyBills", "Which campus spent the most on energy in 2025?",
+    llm=llm,
+    notes="A sensor identifier reads CAMPUS-BUILDING-METER.",
+)
+print(result["answer"], result["sql"], result["source"])
+```
+
+Two things are easier here than on the graph, and one is harder. Easier: SQLite compiles a
+query without running it, so `SQL.Validate` rejects a hallucinated column **by name** through
+`EXPLAIN` rather than leaving it to return zero rows that read like an honest empty answer;
+and the connection is opened `mode=ro`, so the safety pass has the engine behind it and not a
+regex alone. Harder: a table carries no labels and no types, so what a sensor identifier
+*means* is something only you know - which is what `notes` is for. It is appended to the
+grounding block, and it is usually the difference between a right answer and a plausible one.
 
 `Cycle.JSONLDCreateByPrompt` goes the other way and **builds** a graph from a description.
 The whole document arrives in one reply, so raise `maxTokens` well above the default:
@@ -116,6 +140,33 @@ New IRIs are the one thing the model invents, because a node being added does no
 update that runs but changes nothing is this cycle's empty SELECT, and gets the same treatment: one
 rewrite, kept only if it actually moves a triple.
 
+`Cycle.SQLiteEditByPrompt` is the same idea over a table. `SQL.ValidateUpdate` holds the model to
+one INSERT, UPDATE or DELETE against the table you named, and refuses the three ways a statement
+can destroy data while answering the request as put: an UPDATE or DELETE with no WHERE (which
+rewrites or empties the whole table), a REPLACE (which deletes whatever row it collides with), and
+a write to any other table. `Observation.SQLiteApplyUpdate` then **rehearses** it - runs it inside
+a transaction, reads the diff, and rolls back - so nothing reaches the file until the change has
+been seen:
+
+```python
+from btwin import LLM, Cycle
+
+llm = LLM.Constructor()
+edit = Cycle.SQLiteEditByPrompt(
+    "energyBills.db", "energyBills",
+    "The January 2025 electricity reading for NAV-B1 was misread. Correct it to 21000 kWh.",
+    llm=llm,
+)
+print(edit["changes"], edit["removed"], edit["added"])   # rows, before and after
+```
+
+Where the result goes is yours to choose, and the default is the safe one: with neither `inPlace`
+nor `savePath` the edit is a **dry run** - you get the diff, the database is untouched, and
+`committed` is False. `savePath` copies the database and commits to the copy; `inPlace=True`
+commits to the original. Reading a dry run before trusting an edit is the whole point of the
+design, and it earns its keep: in testing it was the diff that showed a new district-heating
+reading about to be filed under `ElectricityConsumption`, before it landed.
+
 ### Holding a conversation
 
 The two RDF cycles each take one self-contained prompt and remember nothing. `Cycle.RDFChat`
@@ -178,6 +229,29 @@ Every turn prints the query it ran and what it cost, because the reading that ca
 answer is the query rather than the sentence; `silent=True` leaves only the answers. The
 commands are `/sparql`, `/history`, `/schema`, `/cost`, `/silent`, `/verbose`, `/save` and
 `/exit`, and Escape leaves too — at the edit confirmation it means no.
+
+`Cycle.SQLiteChatTurn` and `Cycle.SQLiteChat` are the same two things over an observation
+table, routed by `Tool.CHAT_TABLE_ROUTER_PROMPT` rather than the graph one. `Tool.ChatRoute`
+and `Tool.ChatReply` are shared: the three intents and the JSON reply are identical whatever
+the subject, so only the wording of what counts as a question or an edit changes.
+
+```python
+session = Cycle.SQLiteChat(
+    "energyBills.db", "energyBills",
+    notes="A sensor identifier reads CAMPUS-BUILDING-METER.",
+    savePath="energyBills_edited.db",
+)
+print(session["edits"], session["database"])
+```
+
+Where a confirmed edit lands is decided once, before the first turn, and said out loud:
+`savePath` copies the database and the whole conversation talks to the copy — the direct
+equivalent of `RDFChat` editing a graph in memory rather than the file it was read from;
+`inPlace=True` edits the original, with no undo; with neither, edits are rehearsed and shown
+but cannot be kept, and the session says so instead of asking a question it cannot honour.
+There is no `/save`, because a committed edit is already on disk: a database is the file
+rather than something serialised into one. The commands are `/sql`, `/rows`, `/history`,
+`/schema`, `/cost`, `/silent`, `/verbose` and `/exit`.
 
 ### Paths through the graph
 
