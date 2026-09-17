@@ -99,29 +99,62 @@ Serialization.JSONLDByObjects(objects, savePath="my_building.json")
 
 ## Tutorials
 
-Five runnable notebooks live in [`tutorials/`](https://github.com/angelomassafra/btwin/blob/main/tutorials), numbered in the order they are meant
-to be read. Each sits in its own self-contained folder and is committed with its outputs, so they
-can be read on GitHub without running anything.
+Nine runnable notebooks live in [`tutorials/`](https://github.com/angelomassafra/btwin/blob/main/tutorials), numbered in the order they are
+meant to be read. Each sits in its own self-contained folder and is committed with its outputs, so
+they can be read on GitHub without running anything.
 
 | # | Tutorial | What it covers |
 |---|---|---|
 | 00 | [Early adopters](https://github.com/angelomassafra/btwin/blob/main/tutorials/00-early-adopters/early-adopters.ipynb) | The reference walkthrough: every module, method by method — schema, spatial elements, equipment, properties, KPIs, points and observations, serialization, graph operations. |
 | 01 | [Create a BTwin graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/01-create-a-btwin-graph/create-a-btwin-graph.ipynb) | Builds a two-storey office from synthetic data — spatial hierarchy, property sets, sensors, a KPI set, documents — then serializes, queries and draws it. No LLM. |
-| 02 | [Move a graph between formats](https://github.com/angelomassafra/btwin/blob/main/tutorials/02-graph-formats/graph-formats.ipynb) | JSON-LD, NetworkX, RDF/SPARQL and Neo4j, and a measured account of what each conversion keeps or drops. |
-| 03 | [LLM in action](https://github.com/angelomassafra/btwin/blob/main/tutorials/03-llm-in-action/llm-in-action.ipynb) | Builds a graph from an English prompt and queries it in English. Requires an API key and bills your account. |
-| 04 | [Chat with a graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/04-chat-with-graph/chat-with-graph.ipynb) | Holds a conversation with a graph: follow-up questions that resolve against what was already said, and edits confirmed before they land. Requires an API key. |
+| 02 | [Move a graph between formats](https://github.com/angelomassafra/btwin/blob/main/tutorials/02-graph-formats/graph-formats.ipynb) | The same graph through JSON-LD, NetworkX, RDF/SPARQL and Neo4j, with a measured account of what each conversion keeps or drops. No LLM. |
+| 03 | [LLM in action](https://github.com/angelomassafra/btwin/blob/main/tutorials/03-llm-in-action/llm-in-action.ipynb) | Builds a graph from an English prompt and queries it in English. Shows the validate-and-repair loop, what it catches and — importantly — what it does not. Requires an API key. |
+| 04 | [Chat with a graph](https://github.com/angelomassafra/btwin/blob/main/tutorials/04-chat-with-graph/chat-with-graph.ipynb) | Turns those one-shot cycles into a conversation: a follow-up question that resolves against what was already said, and an edit shown as a triple diff before it lands. Requires an API key. |
+| 05 | [Timeseries management](https://github.com/angelomassafra/btwin/blob/main/tutorials/05-timeseries-management/timeseries-management.ipynb) | Leaves the graph for the readings. A week of sensor data into SQLite and back out: the typed query API, raw SQL on a read-only connection, the block that describes a table to something that has never seen it, and an edit rehearsed in a transaction before it is kept. No LLM. |
+| 06 | [Chat with a timeseries table](https://github.com/angelomassafra/btwin/blob/main/tutorials/06-chat-with-timeseries/chat-with-timeseries.ipynb) | Hands all of that to a model: a question answered in SQL, what the validator catches, what `notes` buys you (a unit error four times too large that reads exactly like a right answer), an edit confirmed before it commits, and a conversation. Requires an API key. |
+| 07 | [Integrate graph and timeseries](https://github.com/angelomassafra/btwin/blob/main/tutorials/07-integrate-graph-and-timeseries/integrate-graph-and-timeseries.ipynb) | Joins the two halves into one twin. A `btwin:Document` per database, a SPARQL locator that answers *where would I look?*, one SQL query compiled against every file it found, and a figure neither half could produce — consumption per square metre — recorded back onto the buildings. No LLM. |
+| 08 | [Chat with a twin](https://github.com/angelomassafra/btwin/blob/main/tutorials/08-chat-with-twin/chat-with-twin.ipynb) | Puts a model in front of that pipeline, in exactly three places: writing the locator, writing the SQL, and naming the KPIs in a plan. One entry point routes a question to the graph, the readings or both, and a `derive` edit reads the databases and writes the graph — shown before it lands. Requires an API key. |
 
-00 is a reference to look things up in; 01 to 04 are a narrative that builds one graph and puts it
-to work. Tutorials 01 to 03 write a self-contained interactive HTML page after every stage into
-their own `output/` folder, so you can click through the graph as it grows — open any `step-*.html`
-directly in a browser.
+00 is a reference to look things up in; 01 to 08 are a narrative. They come in pairs, and the
+pairing is the point:
 
-See [`tutorials/README.md`](https://github.com/angelomassafra/btwin/blob/main/tutorials/README.md) for what each one needs and how to run them.
+- **01–04 are about the graph** — what a building *is*. 01 builds one by hand, 02 moves it between
+  formats, 03 hands the building and the querying to a model, 04 makes that a conversation.
+- **05–06 are about the readings** — what the building *did*. 05 builds and queries a table with no
+  model; 06 hands the same table to one. 03 is to 05 what 04 is to 06: the two halves of the
+  library are deliberately shaped the same way, so a page of 06 read beside a page of 04 shows what
+  changes when the thing being questioned is a table rather than a graph.
+- **07–08 join the halves into one twin.** 07 drives every step by hand, with no model anywhere;
+  08 puts a model in front of exactly those steps. Read them in that order — 08 is much easier to
+  trust once you have seen what it is driving.
+
+Five of the nine call no model at all — 00, 01, 02, 05 and 07 — and bill nothing (00 and 02 will
+use a Neo4j database if one is reachable, and carry on without it). The other four — 03, 04, 06 and
+08 — need `OPENROUTER_API_KEY` and are billed to your key; each prints its own `CostMeter` total,
+and the committed runs cost between $0.0015 and $0.0083 on the default model.
+
+Tutorials 01 to 03 write a self-contained interactive HTML page after every stage into their own
+`output/` folder, so you can click through the graph as it grows — open any `step-*.html` directly
+in a browser. The later ones keep their artefacts the same way, always writing an edit to a copy so
+the starting point survives: 04 keeps the graph as built and as edited in Turtle, 05 and 06 keep
+two SQLite files each, and 07 and 08 keep a whole twin — six SQLite databases plus the graph that
+points at them.
+
+Each folder is self-contained: 02 ships its own copy of 01's JSON-LD in `input/`, and 03 to 08
+generate everything they need, so any notebook can be run on its own. Run each one **from inside
+its own folder**, since the paths are relative to it:
+
+```bash
+pip install "btwin[viz,rdf,llm]" neo4j
+jupyter lab tutorials/
+```
+
+See [`tutorials/README.md`](https://github.com/angelomassafra/btwin/blob/main/tutorials/README.md) for exactly what each one needs, what it costs and what it writes.
 
 ## Language models
 
-BTwin does not need a language model. Every module listed above works without one, and the first
-two tutorials never call out to a provider. The optional `btwin.llm` module adds a natural-language
+BTwin does not need a language model. Every module listed above works without one, and five of the
+nine tutorials never call out to a provider. The optional `btwin.llm` module adds a natural-language
 layer *on top of* the graph, installed with `pip install btwin[llm]`.
 
 The design principle is that **the model is never trusted to know the ontologies**. Instead:
@@ -152,6 +185,9 @@ The design principle is that **the model is never trusted to know the ontologies
 | `Cycle.RDFChat` | The same, as a terminal chat that keeps its own history |
 | `Cycle.SQLiteChatTurn` | One conversation turn over a table: route it, then answer or edit |
 | `Cycle.SQLiteChat` | The same, as a terminal chat that keeps its own history |
+| `Cycle.TwinQueryByPrompt` | English question → routed to the graph, the readings or both → an English answer |
+| `Cycle.TwinChatTurn` | One conversation turn over a whole twin, including a `derive` edit that reads the databases and writes KPIs back onto the graph |
+| `Cycle.TwinChat` | The same, as a terminal chat that keeps its own history |
 
 `Tool` exposes the individual agents if you would rather drive the pipeline yourself, and
 `CostMeter` records tokens and cost for every call so a run's price is never a surprise.

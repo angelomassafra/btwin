@@ -1,0 +1,47 @@
+@prefix bot: <https://w3id.org/bot#> .
+@prefix brick: <https://brickschema.org/schema/Brick#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://example.org/elmgrove/BLDG-F1-S1-C1> a brick:CO2_Sensor ;
+    rdfs:label "Waiting Room CO2 Sensor" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F1-S1> .
+
+<https://example.org/elmgrove/BLDG-F1-S1-T1> a brick:Temperature_Sensor ;
+    rdfs:label "Waiting Room Temperature Sensor" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F1-S1> .
+
+<https://example.org/elmgrove/BLDG-F1-S2-T1> a brick:Temperature_Sensor ;
+    rdfs:label "Consulting Room Temperature Sensor" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F1-S2> .
+
+<https://example.org/elmgrove/BLDG-F2-S1-H1> a brick:Humidity_Sensor ;
+    rdfs:label "Laboratory Humidity Sensor" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F2-S1> .
+
+<https://example.org/elmgrove/BLDG-F2-S2> a bot:Space ;
+    rdfs:label "Small Office" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F2> .
+
+<https://example.org/elmgrove/BLDG-F1-S2> a bot:Space ;
+    rdfs:label "Consulting Room" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F1> .
+
+<https://example.org/elmgrove/BLDG-F2-S1> a bot:Space ;
+    rdfs:label "Laboratory" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F2> .
+
+<https://example.org/elmgrove/BLDG> a bot:Building ;
+    rdfs:label "Elmgrove Outpatient Clinic" .
+
+<https://example.org/elmgrove/BLDG-F1> a bot:Storey ;
+    rdfs:label "Ground Floor" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG> .
+
+<https://example.org/elmgrove/BLDG-F1-S1> a bot:Space ;
+    rdfs:label "Waiting Room" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG-F1> .
+
+<https://example.org/elmgrove/BLDG-F2> a bot:Storey ;
+    rdfs:label "First Floor" ;
+    brick:hasLocation <https://example.org/elmgrove/BLDG> .
+
