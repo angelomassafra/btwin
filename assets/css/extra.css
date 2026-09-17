@@ -1,0 +1,11 @@
+/* BTwin docs — minimal custom styling */
+
+/* Limit content width for readability */
+.md-content {
+    max-width: 960px;
+}
+
+/* Slightly tighter API reference signatures */
+.doc-object .doc-heading code {
+    font-size: 0.85em;
+}
