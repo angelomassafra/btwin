@@ -16,6 +16,14 @@ import pandas as pd
 
 # Functions
 class Equipment():
+    """
+    Physical devices as JSON-LD dictionaries: air handlers, pumps, meters, lighting.
+
+    An equipment object is a plain dict - `{'@id', '@type', 'name', 'relationships'}` -
+    typed with a Brick equipment class from `Types`. Where it sits is set with
+    `SetLocationRelationship`, the system it belongs to with `SetPartOfRelationship`, and
+    what it serves with `SetFeedingRelationship`.
+    """
 
     @staticmethod
     def Constructor(
@@ -509,6 +517,13 @@ class Equipment():
         return uid
 
 class Inventory:
+    """
+    An equipment list kept in a spreadsheet, turned into Equipment objects in bulk.
+
+    `Template` lays out the expected columns - id, name, type, parent system and location -
+    and `ToJSONLD` reads a filled-in workbook back as a list of Equipment dictionaries,
+    optionally creating the systems it names.
+    """
 
     @staticmethod
     def Template(savePath: Optional[str] = None) -> pd.DataFrame:

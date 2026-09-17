@@ -16,6 +16,15 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 
 class Serialization():
+    """
+    BTWIN objects to a JSON-LD document, and the IRIs that document is written with.
+
+    `IRIs` returns the prefixes, classes and properties known to the export - its own table,
+    extended with every type `Point.Types` and `Equipment.Types` accept. `JSONLDByObjects`
+    collects spatial elements, equipment, points, property sets, KPI sets, scenarios and
+    documents into one '@context' + '@graph' document, validating every class and predicate
+    against that table. The result is the input to `NetworkX.ByJSONLD` and `RDF.ByJSONLD`.
+    """
 
     @staticmethod
     def IRIs() -> Dict[str, Any]:

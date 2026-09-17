@@ -1,8 +1,27 @@
-# Graph (NetworkX & RDF)
+# Graph (NetworkX, RDF & SPARQL)
 
-Graph operations for building, querying, and exporting knowledge graphs.
+A JSON-LD document from [`Serialization`](serialization.md) becomes a graph in one of two
+forms: a NetworkX labelled property graph, for traversal, reshaping and drawing, or an RDFLib
+graph, for SPARQL and for grounding a language model. `SPARQL` checks a query before it is
+run against the latter.
 
 ## NetworkX
+
+`NetworkX.ByJSONLD` builds a `MultiDiGraph` — one node per object, one edge per relationship —
+and validates its types against [`Schema`](schema.md), returning the graph with the report.
+
+```python
+from btwin import NetworkX
+
+graph, report = NetworkX.ByJSONLD(jsonPath="model.json", printReport=False)
+report["ok"]
+
+graph = NetworkX.CompactPSets(graph)                 # properties onto their owner nodes
+around = NetworkX.SubgraphByObjectUID(graph, "storey-01", nodeDegree=1)
+spaces = NetworkX.NodeLinkedNodes(graph, "storey-01", linkedNodesType="bot:Space")
+
+NetworkX.ToRDF(graph, "model.ttl")                   # or ToJSON, or ToNEO4J
+```
 
 ::: btwin.graph.NetworkX
     options:

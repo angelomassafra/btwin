@@ -9,6 +9,13 @@ for attributing properties to the digital objects in the BTWIN toolkit.
 """
 
 class PropertySet:
+    """
+    IFC property sets as JSON-LD dictionaries.
+
+    A property set is a named container - `{'@id', '@type': 'ifc:IfcPropertySet', 'name',
+    'ifc:HasProperties'}` - holding `Property` dictionaries. It is attached to a spatial
+    element, a piece of equipment or a document through 'ifc:HasPropertySets'.
+    """
 
     @staticmethod
     def Constructor(psetUID=None, psetName=None):
@@ -212,11 +219,26 @@ class PropertySet:
     @staticmethod
     def UID(pset=None):
         """
-            Return the unique identifier of the property set JSONLD object
+        Return the unique identifier of a property set.
+
+        Args:
+            pset (dict): Property set dictionary produced by PropertySet.Constructor.
+
+        Returns:
+            str: The property set's '@id'.
+
+        Raises:
+            KeyError: If the property set has no '@id'.
         """
         return pset['@id']
 
 class Property:
+    """
+    A single IFC property: a name, one value or an enumeration of values, a datatype and a unit.
+
+    A single value is stored as 'nominalValue', an enumeration as 'enumeratedValues', each
+    carrying `{'type', 'value', 'unit'}`. Properties live inside a `PropertySet`.
+    """
 
     @staticmethod
     def Constructor(propertyName=None, propertyValue=None, propertyValues=None,
@@ -230,11 +252,12 @@ class Property:
             propertyValues (list | None): Values for 'IfcPropertyEnumeratedValue'.
             propertyQuantity (str | None): Datatype/quantity of the value(s) (e.g., 'IfcLabel').
             propertyType (str): Either 'IfcPropertySingleValue' or 'IfcPropertyEnumeratedValue'.
+            propertyUnit (str | None): Unit of the value(s) (e.g., 'm2', 'kWh'), stored beside each value.
 
         Returns:
             dict: IFC property dictionary with keys '@type', 'name', and one of:
-                  - 'nominalValue': {'type': propertyQuantity, 'value': propertyValue}
-                  - 'enumeratedValues': [{'type': propertyQuantity, 'value': v}, ...]
+                  - 'nominalValue': {'type': propertyQuantity, 'value': propertyValue, 'unit': propertyUnit}
+                  - 'enumeratedValues': [{'type': propertyQuantity, 'value': v, 'unit': propertyUnit}, ...]
 
         Raises:
             ValueError: If required inputs are missing or inconsistent with propertyType.
@@ -340,6 +363,7 @@ class Property:
             propertyValue (any | list | None): Value for single; list of values for enumerated.
             propertyType (str): 'IfcPropertySingleValue' or 'IfcPropertyEnumeratedValue'.
             propertyQuantity (str | None): Datatype/quantity of the value(s).
+            propertyUnit (str | None): Unit of the value(s), stored beside each value.
 
         Returns:
             dict: The updated property dictionary (same reference as input).

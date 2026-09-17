@@ -71,7 +71,7 @@ llm = LLM.Constructor(maxTokens=32000)
 result = Cycle.JSONLDCreateByPrompt(
     "1 building, 3 floors, 10 spaces per floor, each space has 4 sensors", llm=llm,
 )
-graph = NetworkX.ByJSONLD(jsonld=result["jsonld"])
+graph, report = NetworkX.ByJSONLD(jsonld=result["jsonld"])
 ```
 
 Both return a `usage` dict, and both take a shared `CostMeter` so a run can be subtotalled

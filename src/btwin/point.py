@@ -24,6 +24,13 @@ import pandas as pd
 
 # Functions
 class Point():
+    """
+    Sensors, setpoints, commands and other data sources as JSON-LD dictionaries.
+
+    A point is a plain dict - `{'@id', '@type', 'name', 'relationships'}` - typed with a
+    Brick point class from `Types`. Its readings do not live on the node: they live in a
+    SQLite table handled by `Observation`, keyed by the point's UID.
+    """
 
     @staticmethod
     def Constructor(
@@ -316,6 +323,16 @@ class Point():
         return uid
 
 class Observation():
+    """
+    Timeseries readings in SQLite, in the shape of a SOSA observation.
+
+    One row per reading - `sosa:madeBySensor`, `sosa:ObservedProperty`, `unit`, `value`,
+    `timestamp` - as laid out by `Template`. `SQLiteByDF` and `SQLiteByXLSX` write tables,
+    `SQLiteQuery` filters and aggregates them. The rest serve a language model working on a
+    table: `SQLiteIndex` and `SQLiteSchemaSummary` describe it, `SQLiteFetch` runs a query
+    read-only, `SQLiteApplyUpdate` runs an edit inside a transaction and reports the rows it
+    changed, and `SQLiteCopy` makes a consistent copy to try that edit on.
+    """
 
     @staticmethod
     def SQLiteByDF(
@@ -1318,6 +1335,16 @@ def _ScanSQL(sql: str) -> str:
 
 
 class SQL():
+    """
+    The gate between a generated SQL statement and a database.
+
+    `Validate` accepts a single read-only query, has SQLite compile it with EXPLAIN - so an
+    invented column is rejected by name rather than returning zero rows - and appends a
+    LIMIT when it carries none. `ValidateUpdate` accepts one INSERT, UPDATE or DELETE, and
+    refuses an UPDATE or DELETE with no WHERE, REPLACE, and a write to any table but the
+    one named. Both return `(checked, error)`, with `checked` None when the statement is
+    refused - the table-side counterpart of `SPARQL`.
+    """
 
     @staticmethod
     def Form(sql: Optional[str] = None) -> str:

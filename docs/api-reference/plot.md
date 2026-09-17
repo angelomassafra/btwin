@@ -14,7 +14,7 @@ page as plain JavaScript, so the file opens with no network and nothing installe
 ```python
 from btwin import GraphPlot, NetworkX
 
-graph = NetworkX.ByJSONLD(jsonPath="spatialHierarchy.json")
+graph, report = NetworkX.ByJSONLD(jsonPath="spatialHierarchy.json")
 GraphPlot.NetworkXByHTML(graph, title="Ferrovia 9", savePath="spatialHierarchy.html")
 ```
 

@@ -9,6 +9,18 @@ This module defines the Schema class, which provides the base semantics and onto
 """
 
 class Schema():
+    """
+    The vocabulary every other BTWIN module is checked against.
+
+    `Types` lists the classes an object may have, each with its ontology IRI - BOT for
+    topology, Brick for zones, equipment and points, IFC for property sets, EKO and KPI
+    for indicators and scenarios. `RelationshipNames` lists the predicates and, for each,
+    the (subject, object) class pairs it may connect. `SetRelationship` methods validate
+    against these two tables when asked to, and `NetworkX.Validate` checks a whole graph
+    against them. The export vocabulary is wider - see `Serialization.IRIs`.
+
+    Like most of BTWIN this is a namespace of static methods, not an object to instantiate.
+    """
 
     @staticmethod
     def RelationshipNames() -> dict:

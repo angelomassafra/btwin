@@ -112,6 +112,15 @@ def _IFCQuantity(ifcQuantity) -> Optional[Dict[str, Any]]:
 
 # Functions
 class SpatialElement:
+    """
+    Building topology as JSON-LD dictionaries: sites, buildings, storeys, spaces and zones.
+
+    A spatial element is a plain dict - `{'@id', '@type', 'name', 'relationships'}` - and
+    every method here takes that dict and returns it, or reads from it. The hierarchy is
+    written upward with `SetLocationRelationship` (space -> storey -> building -> site,
+    via 'brick:hasLocation'), property sets are attached with `SetPSetRelationship`, and
+    any other predicate from `Schema.RelationshipNames` with `SetRelationship`.
+    """
 
     @staticmethod
     def Constructor(
@@ -542,6 +551,13 @@ class SpatialElement:
 
 
 class SpatialHierarchy():
+    """
+    Spatial elements read from an existing model rather than built one by one.
+
+    `ByIFC` extracts the building, its storeys, spaces and zones from an IFC file, with
+    their containment already written as relationships and, on request, their property
+    sets. Requires `ifcopenshell`.
+    """
 
     @staticmethod
     def ByIFC(

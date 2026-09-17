@@ -326,7 +326,17 @@ class CostMeter():
 
     @staticmethod
     def Format(amount: float) -> str:
-        """A single call costs a few millionths of a dollar, so 2 decimals would read as $0.00."""
+        """
+        Format a dollar amount to six decimals.
+
+        A single call costs a few millionths of a dollar, so 2 decimals would read as $0.00.
+
+        Args:
+            amount: The cost in US dollars.
+
+        Returns:
+            str: e.g. '$0.000227'.
+        """
         return f"${amount:.6f}"
 
     @staticmethod
@@ -1109,6 +1119,9 @@ rejected. Return the corrected JSON object and nothing else: no prose, no markdo
     def DocumentText(pdfPath) -> str:
         """
         The text layer of a PDF, page by page.
+
+        Args:
+            pdfPath: Path to the PDF to read.
 
         Returns:
             str: The extracted text, empty when the PDF carries no text layer at all - which
@@ -5680,6 +5693,10 @@ class Cycle():
                 Cycle.SQLiteQueryByPrompt.
             maxRepairs: How many times a rejected locator or query may be sent back.
             emptyRetries: How many times an empty locator or an empty result is rewritten.
+            locatorRepairs: How many times a rejected locator may be sent back before the
+                question is handed to the graph instead. Kept small on purpose: a locator
+                that finds no database is usually a question the readings cannot answer,
+                and 'fellBack' in the result says the answer came from the graph.
             rowLimit: Maximum rows a generated query may return, per database.
             maxDatabases: Refuse a fan-out wider than this.
             verbose: Print each step's output and cost as it goes.

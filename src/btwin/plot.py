@@ -13,46 +13,82 @@ from __future__ import annotations
 
 # Functions
 class Color():
+    """
+    The BTWIN palette: five named colors as 'rgb(r,g,b)' strings, and a Matplotlib colormap.
+    """
 
     @staticmethod
     def Dark():
 
-        """Return BTwin's dark color as rgb()"""
+        """
+        Return BTwin's dark color.
+
+        Returns:
+            str: 'rgb(89,89,89)', a CSS/Plotly color string.
+        """
 
         return 'rgb(89,89,89)'
 
     @staticmethod
     def Light():
 
-        """Return BTwin's light color as rgb()"""
+        """
+        Return BTwin's light color.
+
+        Returns:
+            str: 'rgb(237,237,237)', a CSS/Plotly color string.
+        """
 
         return 'rgb(237,237,237)'
 
     @staticmethod
     def Orange():
 
-        """Return BTwin's orange as rgb()"""
+        """
+        Return BTwin's orange.
+
+        Returns:
+            str: 'rgb(250,160,120)', a CSS/Plotly color string.
+        """
 
         return 'rgb(250,160,120)'
 
     @staticmethod
     def Purple():
 
-        """Return BTwin's purple as rgb()"""
+        """
+        Return BTwin's purple.
+
+        Returns:
+            str: 'rgb(160,30,120)', a CSS/Plotly color string.
+        """
 
         return 'rgb(160,30,120)'
 
     @staticmethod
     def Red():
 
-        """Return BTwin's red as rgb()"""
+        """
+        Return BTwin's red.
+
+        Returns:
+            str: 'rgb(230,80,110)', a CSS/Plotly color string.
+        """
 
         return 'rgb(230,80,110)'
 
     @staticmethod
     def Sunsetdark():
 
-        """Return a matplotlib colormap based on Plotly's 'Sunsetdark' color sequence."""
+        """
+        Return a matplotlib colormap based on Plotly's 'Sunsetdark' color sequence.
+
+        Returns:
+            matplotlib.colors.LinearSegmentedColormap: The colormap, named 'Sunsetdark'.
+
+        Raises:
+            ImportError: If plotly or matplotlib are not installed.
+        """
 
         # Dependencies
         import plotly.express as px
@@ -65,6 +101,12 @@ class Color():
         return colormap
 
 class GraphPlot():
+    """
+    Drawing a NetworkX graph, with nodes and edges colored by type.
+
+    `NetworkXByMatplotlib` for a static PNG, `NetworkXByPlotly` for a figure to embed in a
+    Plotly page, `NetworkXByHTML` for one self-contained interactive page to explore.
+    """
 
     @staticmethod
     def NetworkXByMatplotlib(
@@ -89,7 +131,32 @@ class GraphPlot():
 
         Node color groups are determined from node attributes (priority order: 'label', 'type', '@type').
         Edge color groups are determined from edge attributes (priority order: 'label', 'type', 'relationship', 'relation', 'name').
-        If attributes are missing, sensible fallbacks are used.
+        A node or edge carrying none of them falls in the group 'Unknown'.
+
+        Args:
+            nxGraph: (networkx.Graph | DiGraph | MultiGraph | MultiDiGraph) Graph to draw.
+            showNodeLabels: If True, write each node's key beside it.
+            showEdgeLabels: If True, write each edge's group label at its midpoint.
+            nodeColorMap: Matplotlib colormap name for node groups (e.g., 'turbo', 'viridis'),
+                or a hex color such as '#A01E78' to draw every node in that one color. An
+                unknown colormap name falls back to 'viridis'.
+            nodeSize: Marker size, in points squared. Must be positive.
+            nodeOpacity: Marker opacity [0..1].
+            edgeColorMap: Matplotlib colormap name for edge groups, or a single hex color.
+            edgeWidth: Edge line width. Must be non-negative.
+            savePath: If provided, saves the figure there as PNG.
+            figsize: (width, height) in inches for the figure.
+            showLegend: Show a legend for node and edge groups, outside the axes on the right.
+            layout: {'spring','kamada_kawai','circular','random','shell','spectral'} NetworkX layout.
+            layoutSeed: Seed for deterministic layouts when applicable.
+            dpi: Resolution of the saved PNG.
+
+        Returns:
+            tuple: (matplotlib.figure.Figure, matplotlib.axes.Axes), after the figure is shown.
+
+        Raises:
+            ValueError: On invalid inputs/parameters, or an unsupported `layout`.
+            ImportError: If matplotlib or networkx are not available.
         """
 
         # --- Imports & validation -------------------------------------------------

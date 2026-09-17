@@ -14,6 +14,16 @@ from typing import Any, Dict, List, Optional, Union
 
 
 class KPISet:
+    """
+    A group of key performance indicators evaluated over one time interval.
+
+    A KPI set is a dict typed 'btwin:KPISet', holding its `KPI` dictionaries in
+    'btwin:hasKPIs' and its interval under the 'eko:hasEvaluationTimestep' relationship.
+    It points at the object it measures through 'eko:hasAssociatedObject'
+    (`SetAssociatedObject`) and at the conditions it was measured under through
+    'kpi:relatedScenario' (`SetScenario`). `SetKPIsTimestep` copies the set's interval onto
+    every KPI it holds.
+    """
 
     @staticmethod
     def Constructor(
@@ -483,6 +493,12 @@ class KPISet:
         return uid
 
 class KPI:
+    """
+    One key performance indicator: a value, a unit and the interval it was evaluated over.
+
+    KPIs are built here and stored inside a `KPISet` with `KPISet.SetKPI`; the accessors
+    read them back. Timestamps are validated and normalised to ISO-8601 UTC.
+    """
 
     @staticmethod
     def Constructor(

@@ -14,6 +14,14 @@ from typing import Any, Dict, Optional
 
 # Functions
 class Document():
+    """
+    Files, models and databases attached to building objects, as JSON-LD dictionaries.
+
+    A document is a plain dict typed 'btwin:Document' - a manual, a drawing, an IFC model,
+    a timeseries database. It is linked to what it describes with `SetRelationship`
+    (e.g. 'btwin:isDocumentOf'), to a scenario with `SetScenario`, and to its own metadata
+    with `SetPSet`.
+    """
 
     @staticmethod
     def Constructor(

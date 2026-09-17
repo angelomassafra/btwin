@@ -36,6 +36,15 @@ def _mark(ok: bool) -> str:
 
 # Functions
 class NetworkX():
+    """
+    BTWIN data as a NetworkX graph: build, validate, reshape, query and export.
+
+    `ByJSONLD` builds a MultiDiGraph from a JSON-LD document - one node per object, one
+    edge per relationship - and `Validate` checks its types against `Schema`.
+    `CompactPSets` and `CompactKPISets` fold property sets and KPIs into the nodes they
+    describe, `SubgraphBy*` and `NodeLinked*` cut the graph down, and `ToJSON`, `ToRDF` and
+    `ToNEO4J` move it on.
+    """
 
     @staticmethod
     def AddEdgesByObject(
@@ -545,7 +554,7 @@ class NetworkX():
             OSError:     If reading `jsonPath` fails.
 
         Examples:
-            >>> G, report = SpatialElement.ByJSONLD(jsonld=my_jsonld, validateGraph=True)
+            >>> G, report = NetworkX.ByJSONLD(jsonld=my_jsonld, validateGraph=True)
             >>> report["ok"]
             True
         """
@@ -664,6 +673,7 @@ class NetworkX():
             attachAllIfNoRelMatch: Fallback attaching to all adjacent when no rel match.
             includeUnits: Also attach units as {name + kpiUnitSuffix: unit}.
             kpiNamePrefix: Prefix for KPI names on owner nodes.
+            kpiUnitSuffix: Suffix appended to a KPI name to form the key its unit is stored under.
             includeTimestep: If True, add {beginningKey, endKey} (default False).
             includeAssociatedObject: If True, add {'associatedObjectId', 'associatedObjectType'} (default False).
             stripForbiddenKeys: If True, remove forbidden keys from owners after processing.
@@ -2231,6 +2241,14 @@ class NetworkX():
         return report
 
 class RDF():
+    """
+    BTWIN data as an RDFLib graph, and the description of it an LLM is grounded on.
+
+    `ByJSONLD` and `ByTTL` load a graph, `Query` runs SPARQL against it and returns plain
+    rows. `Index`, `SchemaSummary` and `Chains` describe the graph's vocabulary and the
+    multi-hop paths its data actually walks, which is the text a model writing SPARQL is
+    shown; `SourceNodes` lists the nodes an answer rests on.
+    """
 
     @staticmethod
     def ByJSONLD(
@@ -3099,6 +3117,14 @@ def _ScanText(sparql: str) -> str:
 
 
 class SPARQL():
+    """
+    The gate between a generated SPARQL query and a graph.
+
+    `Validate` accepts a SELECT or ASK that writes nothing, reaches out over no network and
+    uses only vocabulary the graph contains. `ValidateUpdate` accepts an INSERT or DELETE
+    confined to the default graph, and refuses anything that replaces or empties a whole
+    graph. Both return `(checked, error)`, with `checked` None when the query is refused.
+    """
 
     @staticmethod
     def Form(sparql: Optional[str] = None) -> str:

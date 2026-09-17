@@ -13,6 +13,13 @@ from typing import Any, Dict, Optional
 
 
 class Scenario():
+    """
+    The conditions a set of KPIs was evaluated under: a baseline, a retrofit, a control strategy.
+
+    A scenario is a plain dict - `{'@id', '@type': 'kpi:Scenario', 'name', 'description',
+    'relationships'}`. KPI sets and documents point at it through 'kpi:relatedScenario',
+    so two sets measuring the same building under different scenarios can be compared.
+    """
 
     @staticmethod
     def Constructor(
